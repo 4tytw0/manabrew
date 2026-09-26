@@ -9,6 +9,7 @@ import { useIsShortScreen, useIsTouch } from "@/hooks/useBreakpoints";
 interface DeckHubFiltersProps {
   filters: DeckHubDiscoveryFilters;
   facets: DeckHubFacets | null;
+  facetsLoading: boolean;
   activeFilterCount: number;
   favoritesEnabled: boolean;
   onChange: (patch: Partial<DeckHubDiscoveryFilters>) => void;

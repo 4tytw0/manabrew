@@ -95,6 +95,7 @@ export interface BoardCanvasProps {
   focusLocked?: boolean;
   focusedOpponentId?: string | null;
   combatFocusIds?: string[];
+  targetingFocusIds?: string[] | null;
   manualFocusId?: string | null;
   playerBars?: PlayerBarSpec[];
   showPlayerBars?: boolean;
@@ -148,6 +149,7 @@ export function BoardCanvasSurface({
   focusLocked = false,
   focusedOpponentId,
   combatFocusIds,
+  targetingFocusIds,
   manualFocusId,
   playerBars,
   showPlayerBars,
@@ -493,6 +495,10 @@ export function BoardCanvasSurface({
   useEffect(() => {
     scene?.setCombatFocus(combatFocusIds ?? []);
   }, [scene, combatFocusIds]);
+
+  useEffect(() => {
+    scene?.setTargetingFocus(targetingFocusIds ?? null);
+  }, [scene, targetingFocusIds]);
 
   useEffect(() => {
     scene?.setManualFocus(manualFocusId ?? null);

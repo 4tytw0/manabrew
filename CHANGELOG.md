@@ -1,5 +1,43 @@
 # Changelog
 
+## [3.50.1](https://github.com/witchesofthehill/manabrew/compare/v3.50.0...v3.50.1) (2026-09-26)
+
+### Fixes
+
+* **forge:** restore submodule pin rolled back in #948 ([#993](https://github.com/witchesofthehill/manabrew/issues/993)) ([48076b4](https://github.com/witchesofthehill/manabrew/commit/48076b40682e08663d19dcd7e94c732be62b34de))
+
+## [3.50.0](https://github.com/witchesofthehill/manabrew/compare/v3.49.6...v3.50.0) (2026-09-26)
+
+### Features
+
+* **ui:** add set study tools for draft preparation ([#983](https://github.com/witchesofthehill/manabrew/issues/983)) ([0f2e788](https://github.com/witchesofthehill/manabrew/commit/0f2e788b191d87c25c2dd1e30d3ccf68b60bc6c1))
+
+## [3.49.6](https://github.com/witchesofthehill/manabrew/compare/v3.49.5...v3.49.6) (2026-09-24)
+
+### Fixes
+
+* **ui:** community loading skeletons and targeting field reveal ([#948](https://github.com/witchesofthehill/manabrew/issues/948)) ([37eaea2](https://github.com/witchesofthehill/manabrew/commit/37eaea22f6ac9ee8ea44443ed0ed2f78c682aba5))
+
+## [3.49.5](https://github.com/witchesofthehill/manabrew/compare/v3.49.4...v3.49.5) (2026-09-24)
+
+## [3.49.4](https://github.com/witchesofthehill/manabrew/compare/v3.49.3...v3.49.4) (2026-09-23)
+
+### Fixes
+
+* **ui:** load locale-matched card images from cdn ([#982](https://github.com/witchesofthehill/manabrew/issues/982)) ([3325ed1](https://github.com/witchesofthehill/manabrew/commit/3325ed14a3746753764a707e44bac174d5c7ff40))
+
+## [3.49.3](https://github.com/witchesofthehill/manabrew/compare/v3.49.2...v3.49.3) (2026-09-22)
+
+### Fixes
+
+* **harness:** discover statically granted alternative costs ([#977](https://github.com/witchesofthehill/manabrew/issues/977)) ([7774117](https://github.com/witchesofthehill/manabrew/commit/7774117c71388cf6beaa18c2628033c3a5e34e82))
+
+## [3.49.2](https://github.com/witchesofthehill/manabrew/compare/v3.49.1...v3.49.2) (2026-09-22)
+
+### Fixes
+
+* **ui:** localize multiplayer card textures per client ([#975](https://github.com/witchesofthehill/manabrew/issues/975)) ([617183c](https://github.com/witchesofthehill/manabrew/commit/617183cffa4e7868917b215266d70451351febab))
+
 ## [3.49.1](https://github.com/witchesofthehill/manabrew/compare/v3.49.0...v3.49.1) (2026-09-22)
 
 ### Fixes
