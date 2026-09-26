@@ -1,3 +1,4 @@
+import { CARD_W } from "@/components/game/game.constants";
 import { FIELD_INNER_EDGE_PAD_PX } from "../constants";
 import { maxScaleForRows } from "../GridLayout";
 import { computeBoardLayout } from "./boardLayout";
@@ -25,12 +26,12 @@ export const MOBILE_BATTLEFIELD_LAYOUT: BattlefieldLayoutPolicy = {
     );
     const playmatTrim = (usable: number) => Math.max(1, usable - FIELD_INNER_EDGE_PAD_PX);
     const selfUsable = playmatTrim(Math.max(1, layout.self.height));
-    const selfScale = Math.max(Number.EPSILON, maxScaleForRows(selfUsable, 2));
+    const selfScale = Math.max(Number.EPSILON, maxScaleForRows(selfUsable, 2, CARD_W));
     const opponentUsables = layout.opponents.map((opponent) =>
       playmatTrim(Math.max(1, opponent.rect.height)),
     );
     const opponentUsable = opponentUsables.length ? Math.min(...opponentUsables) : selfUsable;
-    const opponentScale = Math.max(Number.EPSILON, maxScaleForRows(opponentUsable, 1));
+    const opponentScale = Math.max(Number.EPSILON, maxScaleForRows(opponentUsable, 1, CARD_W));
     const sharedScale = Math.min(selfScale, opponentScale);
     return {
       layout,

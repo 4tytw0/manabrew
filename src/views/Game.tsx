@@ -40,6 +40,8 @@ import type {
   BoardOverlayCommandPreviewSpec,
   BoardOverlayPreviewSpec,
 } from "@/pixi/BoardOverlayCanvas";
+import { DesktopBoardOverlayCanvas } from "@/pixi/DesktopBoardOverlayCanvas";
+import { MobileBoardOverlayCanvas } from "@/pixi/MobileBoardOverlayCanvas";
 import { buildArrowSpecs } from "@/components/game/arrowSpecs";
 import { getDisplayedManaAbilities } from "@/components/game/manaUtils";
 import { PlayModePicker } from "@/components/game/PlayModePicker";
@@ -50,8 +52,10 @@ import { useFlashQueue } from "@/hooks/useFlashQueue";
 import { useHandDrag, type HandDragStart } from "@/hooks/useHandDrag";
 import { useCardPreview } from "@/hooks/useCardPreview";
 import type { PreviewPointerInput } from "@/lib/cardPreview";
+import { MODAL_OPEN_EVENT, topModal } from "@/lib/modalStack";
 import { useMulliganSelection } from "@/hooks/useMulliganSelection";
 import { HoverCardPreview } from "@/components/game/HoverCardPreview";
+import { useIsMobileGame } from "@/hooks/useBreakpoints";
 import { usePromptEffects } from "@/hooks/usePromptEffects";
 import { useCombatState } from "@/hooks/useCombatState";
 import { useGameEventListeners } from "@/hooks/useGameEventListeners";
@@ -96,6 +100,13 @@ import { scryfallToSampleGameCard } from "@/lib/sampleGameCard";
 import { installGameAudioUnlock, playGameAudioCue } from "@/lib/gameAudio";
 import { haptic } from "@/lib/haptics";
 import type { GameRuntime, ManualTabletopApi } from "@/game";
+const EMPTY_PREVIEW_STACK: StackSpec = {
+  cards: [],
+  flash: null,
+  showPreStackFlash: false,
+  collapsed: true,
+};
+const NO_PREVIEW_ACTION = () => undefined;
 const HOVER_ALLOWED_PROMPTS = new Set<PromptType>([
   "chooseAction",
   "chooseAttackers",
@@ -301,6 +312,7 @@ export default function Game({ exitTo }: GameProps = {}) {
   const backgroundUrl = boardBackgroundUrl(backgroundId);
   const backgroundDarken = boardBackgroundDarken(backgroundId);
   const vScale = useHandScale();
+  const isMobileGame = useIsMobileGame();
   const themeColors = useTheme().gameTheme;
   const location = useLocation();
   const devExtraOpponents =
@@ -327,6 +339,14 @@ export default function Game({ exitTo }: GameProps = {}) {
   const [combatDetailsOpen, setCombatDetailsOpen] = useState(false);
   const [introDone, setIntroDone] = useState(false);
   const handleLoadingComplete = useCallback(() => setIntroDone(true), []);
+  const [modalPanel, setModalPanel] = useState<HTMLElement | null>(null);
+  const zonePreviewScope = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const syncModal = () => setModalPanel(topModal() ?? null);
+    window.addEventListener(MODAL_OPEN_EVENT, syncModal);
+    syncModal();
+    return () => window.removeEventListener(MODAL_OPEN_EVENT, syncModal);
+  }, []);
   const [boardSurfaceEl, setBoardSurfaceEl] = useState<HTMLDivElement | null>(null);
   const activePrompt = manualApi ? null : currentPrompt;
   const promptType = activePrompt?.input.type;
@@ -2021,11 +2041,20 @@ export default function Game({ exitTo }: GameProps = {}) {
       null
     );
   }, [activeFlash, visibleCardsById, stackCardsBySourceId]);
+  const zonePreviewPanel = viewingZone && modalPanel === topModal() ? modalPanel : null;
+  useEffect(() => {
+    zonePreviewScope.current = zonePreviewPanel;
+  }, [zonePreviewPanel]);
+  const zoneCardPreview =
+    !!zonePreviewPanel &&
+    preview.isSticky &&
+    !!livePreviewCard &&
+    liveZoneCards.some((card) => card.id === livePreviewCard.id);
   const showInGamePreview =
     livePreviewCard != null &&
     (livePreviewCard.zoneId !== "hand" || preview.isSticky) &&
     !draggingHandCard &&
-    !viewingZone &&
+    (!viewingZone || zoneCardPreview) &&
     !abilityPickerState &&
     preview.phase !== "hidden";
   const showCommandZonePreview =
@@ -2061,6 +2090,10 @@ export default function Game({ exitTo }: GameProps = {}) {
           "toggle-card-view": togglePreviewView,
         }
       : {},
+  );
+  useKeybindings(
+    zoneCardPreview && externalPreviewActive ? { "toggle-card-view": togglePreviewView } : {},
+    zonePreviewScope,
   );
   useEffect(() => {
     if (!gameView?.gameOver && activePrompt?.input.type !== "gameOver") return;
@@ -2353,6 +2386,8 @@ export default function Game({ exitTo }: GameProps = {}) {
     onShowModal: showPromptModal,
   };
 
+  const ZonePreviewCanvas = isMobileGame ? MobileBoardOverlayCanvas : DesktopBoardOverlayCanvas;
+
   return (
     <div
       ref={containerRef}
@@ -2461,7 +2496,7 @@ export default function Game({ exitTo }: GameProps = {}) {
               : undefined
           }
           onDismissHoverPreview={dismissInGamePreviews}
-          rulesPreview={rulesPreview}
+          rulesPreview={viewingZone ? null : rulesPreview}
           commandPreview={commandPreview}
           externalPreviewActive={externalPreviewActive}
           onPreviewPointerEnter={handlePreviewPointerEnter}
@@ -2750,6 +2785,32 @@ export default function Game({ exitTo }: GameProps = {}) {
           document.body,
         )}
 
+      {zonePreviewPanel &&
+        inGameCardPreviewStyle === "rules" &&
+        zoneCardPreview &&
+        rulesPreview &&
+        createPortal(
+          <div className="pointer-events-none fixed inset-0 z-[10001]">
+            <ZonePreviewCanvas
+              scene={null}
+              stackSpec={EMPTY_PREVIEW_STACK}
+              onTargetSpell={NO_PREVIEW_ACTION}
+              onHoverStack={NO_PREVIEW_ACTION}
+              onToggleStack={NO_PREVIEW_ACTION}
+              promptSpec={null}
+              previewSpec={rulesPreview}
+              externalPreviewActive={externalPreviewActive}
+              onPreviewPointerEnter={preview.onMouseEnterPreview}
+              onPreviewPointerLeave={preview.onMouseLeavePreview}
+              onSelectPreviewAction={handlePreviewAction}
+              onDismissPreview={preview.dismiss}
+              onFlipPreview={handleFlipPreview}
+              onTogglePreviewView={togglePreviewView}
+            />
+          </div>,
+          zonePreviewPanel,
+        )}
+
       {!commandPreview && inGameCardPreviewStyle === "printed" && showInGamePreview && (
         <HoverCardPreview
           preview={{
@@ -2764,6 +2825,7 @@ export default function Game({ exitTo }: GameProps = {}) {
           skipEnterAnimation={skipPreviewEnterAnimation}
           onToggleView={togglePreviewView}
           viewportRight={boardViewportRight}
+          portalTarget={zoneCardPreview ? zonePreviewPanel : null}
         />
       )}
 

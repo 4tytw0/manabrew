@@ -32,6 +32,7 @@ export function MobileHandControl({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const peekTimer = useRef<number | null>(null);
   const peeked = useRef(false);
+  const pointerDown = useRef(false);
 
   const cancelPeekTimer = () => {
     if (peekTimer.current !== null) {
@@ -41,6 +42,8 @@ export function MobileHandControl({
   };
   const startPeekHold = () => {
     if (open || locked || count === 0) return;
+    pointerDown.current = true;
+    peeked.current = false;
     cancelPeekTimer();
     peekTimer.current = window.setTimeout(() => {
       peekTimer.current = null;
@@ -49,8 +52,13 @@ export function MobileHandControl({
     }, PEEK_HOLD_MS);
   };
   const endPeekHold = () => {
+    pointerDown.current = false;
     cancelPeekTimer();
     onPeekEnd?.();
+  };
+  const cancelPeekHold = () => {
+    endPeekHold();
+    peeked.current = false;
   };
 
   useEffect(() => () => cancelPeekTimer(), []);
@@ -94,17 +102,20 @@ export function MobileHandControl({
         (locked || count === 0) && "opacity-70",
       )}
       disabled={locked || count === 0}
-      onClick={() => {
-        if (peeked.current) {
+      onClick={(event) => {
+        if (event.detail !== 0 && peeked.current) {
           peeked.current = false;
           return;
         }
+        peeked.current = false;
         onToggle();
       }}
       onPointerDown={startPeekHold}
       onPointerUp={endPeekHold}
-      onPointerLeave={endPeekHold}
-      onPointerCancel={endPeekHold}
+      onPointerLeave={() => {
+        if (pointerDown.current) cancelPeekHold();
+      }}
+      onPointerCancel={cancelPeekHold}
     >
       {open ? (
         <X className="h-4 w-4" aria-hidden />

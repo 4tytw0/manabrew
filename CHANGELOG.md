@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+* **ui:** keep printed and rules card inspection above stacked zone viewers
+* **ui:** expose all mobile combat stops and restore taps after cancelled hand peeks
+* **ui:** fit compact square cards to bottom-anchored fields and retain accessible overflow stacks
+* **ui:** update live zone locks and keep narrow desktop source-card prompts usable
+
 ## [3.50.1](https://github.com/witchesofthehill/manabrew/compare/v3.50.0...v3.50.1) (2026-09-26)
 
 ### Fixes

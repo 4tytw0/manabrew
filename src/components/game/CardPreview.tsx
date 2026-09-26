@@ -54,6 +54,7 @@ interface CardPreviewProps {
   onMouseLeave?: () => void;
   isSticky?: boolean;
   slot?: HTMLElement | null;
+  portalTarget?: HTMLElement | null;
   imageSize?: "normal" | "large";
 }
 const IMG_VERTICAL = "absolute inset-0 w-full h-full object-cover";
@@ -142,6 +143,7 @@ export function CardPreview({
   isSticky = false,
   slot,
   imageSize = "large",
+  portalTarget,
 }: CardPreviewProps) {
   const resolvedGameCard = useResolvedGameCard(card);
   const hasActions = Boolean(actions?.length && onSelectAction);
@@ -204,6 +206,7 @@ export function CardPreview({
   const previewFaceIndex = showBackFace ? 1 : 0;
   const railEffects = rail ? deriveCardRailEffects(card, rail) : [];
   const panelRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const swipeRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [panelHeight, setPanelHeight] = useState(0);
   const [, setLayoutVersion] = useState(0);
@@ -267,17 +270,19 @@ export function CardPreview({
         )
       : card.counters;
   useKeybindings(
-    onFlip && hasFlippableFaces
-      ? {
-          "flip-card": onFlip,
-        }
-      : {},
+    onFlip && hasFlippableFaces ? { "flip-card": onFlip } : {},
+    portalTarget ? rootRef : undefined,
   );
   useEffect(() => {
     if (!onDismiss) return;
     function handleKey(e: KeyboardEvent) {
-      if (topModal() || e.defaultPrevented || e.isComposing) return;
+      const modal = topModal();
+      if (e.defaultPrevented || e.isComposing || (modal && modal !== portalTarget)) return;
       if (e.key === "Escape") {
+        if (modal) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
         onDismiss!();
         return;
       }
@@ -302,14 +307,14 @@ export function CardPreview({
         onDismiss!();
       }
     }
-    window.addEventListener("keydown", handleKey);
+    window.addEventListener("keydown", handleKey, { capture: !!portalTarget });
     const timer = setTimeout(() => {
       if (isSticky) {
         window.addEventListener("pointerdown", handleClick);
       }
     }, GHOST_CLICK_ARM_MS);
     return () => {
-      window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("keydown", handleKey, { capture: !!portalTarget });
       clearTimeout(timer);
       window.removeEventListener("pointerdown", handleClick);
     };
@@ -321,6 +326,7 @@ export function CardPreview({
     actions,
     integratedClassLevelUpIndex,
     nextClassLevel,
+    portalTarget,
   ]);
   const horizontal = horizontalCard;
   const layout = computePreviewLayout({
@@ -397,6 +403,7 @@ export function CardPreview({
         />
       )}
       <div
+        ref={rootRef}
         data-card-preview
         className={cn(
           "select-none transition-opacity duration-150",
@@ -653,6 +660,6 @@ export function CardPreview({
         </div>
       </div>
     </>,
-    slot ?? document.body,
+    slot ?? portalTarget ?? document.body,
   );
 }

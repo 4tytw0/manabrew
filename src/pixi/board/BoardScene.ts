@@ -1482,6 +1482,7 @@ export class BoardScene {
   setZoneTilesLocked(locked: boolean): void {
     if (this.zoneTilesLocked === locked) return;
     this.zoneTilesLocked = locked;
+    for (const { region } of this.regions.values()) region.setZoneTilesLocked(locked);
   }
 
   getLocalCapsuleBounds(): ScreenBounds | null {

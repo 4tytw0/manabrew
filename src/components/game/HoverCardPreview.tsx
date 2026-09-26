@@ -13,6 +13,7 @@ interface HoverCardPreviewProps {
   viewportRight?: number;
   slot?: HTMLElement | null;
   imageSize?: "normal" | "large";
+  portalTarget?: HTMLElement | null;
 }
 
 export function HoverCardPreview({
@@ -26,6 +27,7 @@ export function HoverCardPreview({
   viewportRight,
   slot,
   imageSize,
+  portalTarget,
 }: HoverCardPreviewProps) {
   if (!preview.hoveredCard || (pinned && preview.phase === "closing")) return null;
   if (pinned && !slot) return null;
@@ -54,6 +56,7 @@ export function HoverCardPreview({
       onMouseLeave={preview.onMouseLeavePreview}
       slot={slot}
       imageSize={imageSize}
+      portalTarget={portalTarget}
     />
   );
 }

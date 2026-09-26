@@ -154,6 +154,7 @@ export class BoardRegion {
   private stackPeekAnchorId: string | null = null;
   private stackCounts = new Map<string, number>();
   private nameGroupChildren = new Set<string>();
+  private overflowChildren = new Set<string>();
   private combatStaging: SceneCombatStaging | null = null;
   private attackTargetRingId: string | null = null;
   private attackTargetRingPulsing = false;
@@ -840,6 +841,8 @@ export class BoardRegion {
       this.uiParent.delete(childId);
     }
     this.nameGroupChildren.clear();
+    for (const childId of this.overflowChildren) this.uiParent.delete(childId);
+    this.overflowChildren.clear();
 
     const effectiveParent = new Map<string, string>();
     for (const c of state.cards) {
@@ -1177,39 +1180,34 @@ export class BoardRegion {
 
   private applyOverflowStacking(topLevelCandidates: CardDto[]): void {
     if (topLevelCandidates.length === 0) return;
-    const zone = this.playArea();
-    const grid = computeGridLayout(
-      zone,
-      0,
-      this.collectLocalBlockers(),
-      this.cardScale,
-      this.zoneTileKeys.length > 0,
-      this.cardHeight(),
-    );
+    const grid = this.freshGrid();
+    const zone = grid.zone;
     let freeCellCount = 0;
     for (const cell of grid.cells) {
       if (!cell.blocked) freeCellCount++;
     }
+    freeCellCount = Math.max(1, freeCellCount);
     if (topLevelCandidates.length <= freeCellCount) return;
 
+    const priority = (card: CardDto): number =>
+      card.id === this.pendingDrop?.cardId ? 0 : this.userPlacedCards.has(card.id) ? 1 : 2;
+    const prioritized = topLevelCandidates.map((card, index) => ({ card, index }));
+    prioritized.sort((a, b) => priority(a.card) - priority(b.card) || a.index - b.index);
     const anchorIds = new Set<string>();
     const anchoredCategories = new Set<BattlefieldCardCategory>();
-    for (const card of topLevelCandidates) {
+    for (const { card } of prioritized) {
       const category = battlefieldCardCategory(card);
       if (anchoredCategories.has(category)) continue;
       anchoredCategories.add(category);
       anchorIds.add(card.id);
     }
-    const prioritized = topLevelCandidates.map((card, index) => ({
-      card,
-      index,
-      protected:
-        card.id === this.pendingDrop?.cardId ||
-        this.userPlacedCards.has(card.id) ||
-        anchorIds.has(card.id),
-    }));
     prioritized.sort((a, b) => {
-      if (a.protected !== b.protected) return a.protected ? -1 : 1;
+      const rankA = priority(a.card);
+      const rankB = priority(b.card);
+      if (rankA !== rankB) return rankA - rankB;
+      if (rankA === 2 && anchorIds.has(a.card.id) !== anchorIds.has(b.card.id)) {
+        return anchorIds.has(a.card.id) ? -1 : 1;
+      }
       const category =
         OVERFLOW_PRIORITY[battlefieldCardCategory(a.card)] -
         OVERFLOW_PRIORITY[battlefieldCardCategory(b.card)];
@@ -1241,19 +1239,33 @@ export class BoardRegion {
       const anchorY = category === "land" ? landAnchorY : nonLandAnchorY;
       let bestId: string | null = null;
       let bestDist = Infinity;
+      let fallbackId: string | null = null;
+      let fallbackDist = Infinity;
       for (const keeper of keepers) {
-        if (battlefieldCardCategory(keeper) !== category) continue;
         const position = keeperPos(keeper.id, anchorY);
         const distance = (position.x - centerX) ** 2 + (position.y - anchorY) ** 2;
-        if (distance < bestDist) {
+        if (distance < fallbackDist) {
+          fallbackDist = distance;
+          fallbackId = keeper.id;
+        }
+        if (battlefieldCardCategory(keeper) === category && distance < bestDist) {
           bestDist = distance;
           bestId = keeper.id;
         }
       }
-      if (bestId) {
-        this.uiParent.set(overflowCard.id, bestId);
+      const keeperId = bestId ?? fallbackId;
+      if (keeperId) {
+        this.uiParent.set(overflowCard.id, keeperId);
+        this.overflowChildren.add(overflowCard.id);
         this.userSlots.delete(overflowCard.id);
-        this.stackCounts.set(bestId, (this.stackCounts.get(bestId) ?? 1) + 1);
+        for (const childId of this.nameGroupChildren) {
+          if (this.uiParent.get(childId) === overflowCard.id) this.uiParent.set(childId, keeperId);
+        }
+        this.stackCounts.set(
+          keeperId,
+          (this.stackCounts.get(keeperId) ?? 1) + (this.stackCounts.get(overflowCard.id) ?? 1),
+        );
+        this.stackCounts.delete(overflowCard.id);
       }
     }
   }
@@ -1270,14 +1282,7 @@ export class BoardRegion {
   private computeBattlefieldGrid(cards: CardDto[]): Map<string, Point> {
     const positions = new Map<string, Point>();
     const zone = this.playArea();
-    const grid = computeGridLayout(
-      zone,
-      0,
-      this.collectLocalBlockers(),
-      this.cardScale,
-      this.zoneTileKeys.length > 0,
-      this.cardHeight(),
-    );
+    const grid = this.freshGrid();
     this.gridInfo = grid;
 
     const occupied = new Set<string>();
@@ -1437,16 +1442,7 @@ export class BoardRegion {
 
   private findFirstFreeBattlefieldSlot(): Point {
     const zone = this.playArea();
-    const grid =
-      this.gridInfo ??
-      computeGridLayout(
-        zone,
-        0,
-        this.collectLocalBlockers(),
-        this.cardScale,
-        this.zoneTileKeys.length > 0,
-        this.cardHeight(),
-      );
+    const grid = this.gridInfo ?? this.freshGrid();
     const occupied = new Set<string>();
     for (const pos of this.gridTargets.values()) {
       const cell = cellFromPoint(grid, pos.x, pos.y);
@@ -1909,6 +1905,7 @@ export class BoardRegion {
 
     for (const id of draggedIds) {
       this.uiParent.delete(id);
+      this.overflowChildren.delete(id);
       const src = sourceCell.get(id);
       const wantCol = (src?.col ?? target.col) + dCol;
       const wantRow = (src?.row ?? target.row) + dRow;
@@ -1939,8 +1936,12 @@ export class BoardRegion {
   commitStackDrop(draggedIds: string[], targetId: string): void {
     for (const id of draggedIds) {
       if (id === targetId) continue;
-      if (this.uiParent.get(targetId) === id) this.uiParent.delete(targetId);
+      if (this.uiParent.get(targetId) === id) {
+        this.uiParent.delete(targetId);
+        this.overflowChildren.delete(targetId);
+      }
       this.uiParent.set(id, targetId);
+      this.overflowChildren.delete(id);
       this.userSlots.delete(id);
       this.userPlacedCards.delete(id);
     }

@@ -934,41 +934,50 @@ export function BoardOverlayCanvasSurface({
   const rulesPreviewOpen = previewSpec?.phase === "open" && !previewSpec.suppressed;
   const commandPreviewOpen = commandPreviewSpec?.phase === "open" && !commandPreviewSpec.suppressed;
 
-  useKeybindings({
-    ...(rulesPreviewOpen && previewSpec.actions.length > 0
-      ? {
-          "preview-prev-action": () => previewRef.current?.focusAction(-1),
-          "preview-next-action": () => previewRef.current?.focusAction(1),
-          "preview-activate-action": () => previewRef.current?.activateFocusedAction(),
-        }
-      : {}),
-    ...(rulesPreviewOpen || commandPreviewOpen
-      ? { "preview-dismiss": () => cbRef.current.onDismissPreview?.() }
-      : {}),
-    ...(rulesPreviewOpen
-      ? { "flip-card": () => previewRef.current?.activatePrimaryTransform() }
-      : hoveredStackObjectId && hoveredStackCard?.card.isDoubleFaced
+  useKeybindings(
+    {
+      ...(rulesPreviewOpen && previewSpec.actions.length > 0
         ? {
-            "flip-card": () => {
-              stackRef.current?.toggleFace(hoveredStackObjectId);
+            "preview-prev-action": () => previewRef.current?.focusAction(-1),
+            "preview-next-action": () => previewRef.current?.focusAction(1),
+            "preview-activate-action": () => previewRef.current?.activateFocusedAction(),
+          }
+        : {}),
+      ...(rulesPreviewOpen || commandPreviewOpen
+        ? { "preview-dismiss": () => cbRef.current.onDismissPreview?.() }
+        : {}),
+      ...(rulesPreviewOpen
+        ? { "flip-card": () => previewRef.current?.activatePrimaryTransform() }
+        : hoveredStackObjectId && hoveredStackCard?.card.isDoubleFaced
+          ? {
+              "flip-card": () => {
+                stackRef.current?.toggleFace(hoveredStackObjectId);
+                schedulerRef.current?.request();
+              },
+            }
+          : {}),
+      ...(!externalPreviewActive && hoveredStackObjectId
+        ? {
+            "toggle-card-view": () => {
+              stackRef.current?.toggleRulesView(hoveredStackObjectId);
               schedulerRef.current?.request();
             },
           }
         : {}),
-    ...(!externalPreviewActive && hoveredStackObjectId
-      ? {
-          "toggle-card-view": () => {
-            stackRef.current?.toggleRulesView(hoveredStackObjectId);
-            schedulerRef.current?.request();
-          },
-        }
-      : {}),
-  });
+    },
+    canvasRef,
+  );
 
   useEffect(() => {
     if (!rulesPreviewOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (topModal() || event.defaultPrevented || event.isComposing) return;
+      const modal = topModal();
+      if (
+        (modal && !modal.contains(canvasRef.current)) ||
+        event.defaultPrevented ||
+        event.isComposing
+      )
+        return;
       if (promptRef.current?.blocksBoard) return;
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const target = event.target;

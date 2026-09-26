@@ -5,15 +5,11 @@ import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import type { StepKind } from "@/protocol";
 
-const COMBAT_STOP: StepKind = "combatDeclareAttackers";
-const COMBAT_PHASE_IDS = PHASES.filter((phase) => phase.combat).map((phase) => phase.id);
-export const PHASE_CONTROLS = PHASES.filter(
-  (phase) => phase.id !== "untap" && (!phase.combat || phase.id === COMBAT_STOP),
-).map((phase) => ({
+export const PHASE_CONTROLS = PHASES.filter((phase) => phase.id !== "untap").map((phase) => ({
   id: phase.id,
-  label: phase.combat ? "Combat" : phase.label,
-  short: phase.combat ? "COM" : phase.short,
-  currentSteps: phase.combat ? COMBAT_PHASE_IDS : [phase.id],
+  label: phase.label,
+  short: phase.short,
+  currentSteps: [phase.id],
 }));
 
 interface OpponentStops {
@@ -94,7 +90,7 @@ export function MobilePhaseStops({
           </button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-x-auto">
           <StopRow
             label="You"
             stops={selfStops}
@@ -144,7 +140,7 @@ function StopRow({
   onToggle: (phase: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))] gap-1">
+    <div className="grid min-w-[40.5rem] grid-cols-[4.5rem_repeat(12,minmax(0,1fr))] gap-1">
       <div className="flex min-w-0 items-center pr-1">
         <span className="truncate text-xs font-semibold text-muted-foreground">{label}</span>
       </div>

@@ -4,6 +4,8 @@ import type {
   ScryPromptLayout,
 } from "./PromptLayerPresentation";
 
+const MIN_PROMPT_PANEL_WIDTH = 360;
+
 export class DesktopPromptLayerPresentation implements PromptLayerPresentation {
   readonly actionStyle = "full";
   readonly modalBodyFit = "scroll";
@@ -35,7 +37,11 @@ export class DesktopPromptLayerPresentation implements PromptLayerPresentation {
     hasSource: boolean,
   ): number {
     if (!hasSource) return Math.min(maxWidth, viewportWidth);
-    return Math.min(maxWidth, Math.max(0, viewportWidth - sourceWidth - sourceGap));
+    return Math.min(
+      maxWidth,
+      viewportWidth,
+      Math.max(MIN_PROMPT_PANEL_WIDTH, viewportWidth - sourceWidth - sourceGap),
+    );
   }
 
   selectionColumns(): number {
