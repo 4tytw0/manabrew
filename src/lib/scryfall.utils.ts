@@ -1,6 +1,7 @@
 import type { CardBackFaceSummary, DeckCard } from "@/protocol/deck";
 import type { CardDto } from "@/protocol/game";
 import type { ScryfallCard } from "@/types/scryfall";
+import type { ScryfallLanguage } from "@/i18n/locales";
 import { getScryfallManaCost } from "@/api/scryfall";
 import { chooseImageUrisForCard } from "@/stores/useScryfallStore";
 import { GAME_CARD_DEFAULTS } from "@/lib/gameCard";
@@ -32,6 +33,14 @@ export function frontFaceName(name: string): string {
   return i >= 0 ? name.slice(0, i) : name;
 }
 
+export function scryfallDisplayName(card: ScryfallCard): string {
+  return card.printed_name ?? card.name;
+}
+
+export function scryfallDisplayTypeLine(card: ScryfallCard): string {
+  return card.printed_type_line ?? card.type_line;
+}
+
 function getFrontTypeLine(sc: ScryfallCard): string {
   if (sc.type_line) return sc.type_line.split("//")[0].trim();
   return sc.card_faces?.[0]?.type_line ?? "";
@@ -57,6 +66,8 @@ function buildBackFaceSummary(sc: ScryfallCard): CardBackFaceSummary | undefined
     manaCost: back.mana_cost ?? "",
     typeLine: back.type_line ?? "",
     oracleText: back.oracle_text ?? "",
+    power: back.power,
+    toughness: back.toughness,
     uris: {
       small: img.small,
       normal: img.normal,
@@ -68,13 +79,14 @@ function buildBackFaceSummary(sc: ScryfallCard): CardBackFaceSummary | undefined
   };
 }
 
-export function needsScryfallEnrichment(card: DeckCard): boolean {
+export function needsScryfallEnrichment(card: DeckCard, locale?: ScryfallLanguage): boolean {
   const needsBasicMeta = (card.cmc === undefined || card.cmc === null) && !card.manaCost;
   const needsAllParts = card.allParts === undefined;
   const needsBackFace =
     (card.isDoubleFaced === true || card.layout === "transform" || card.layout === "modal_dfc") &&
     card.backFace === undefined;
-  return needsBasicMeta || needsAllParts || needsBackFace;
+  const needsImageLanguage = locale ? card.imageLanguage !== locale : !card.imageLanguage;
+  return needsBasicMeta || needsAllParts || needsBackFace || needsImageLanguage;
 }
 
 export function scryfallToDeckCard(sc: ScryfallCard): DeckCard {
@@ -101,6 +113,7 @@ export function scryfallToDeckCard(sc: ScryfallCard): DeckCard {
     toughness: sc.toughness,
     text: getFrontOracleText(sc),
     uris,
+    imageLanguage: sc.lang,
     isDoubleFaced: detectIsDoubleFaced(sc) || undefined,
     backFace: buildBackFaceSummary(sc),
     layout: sc.layout || undefined,

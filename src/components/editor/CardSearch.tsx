@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { useDeckStore } from "@/stores/useDeckStore";
 import { CardDetailModal } from "@/components/editor/CardDetailModal";
 import { CardThumbnail } from "@/components/editor/deckEditor.primitives";
+import { CARD_WIDTH_MAP, DEFAULT_CARD_SIZE } from "@/components/editor/deckBuilder.utils";
+import { SetStudyToolbar } from "@/components/editor/SetStudyToolbar";
 import { SetSelect } from "@/components/editor/SetSelect";
 import { deckCardToPreviewDto, scryfallToDeckCard } from "@/lib/scryfall.utils";
 import { manaSymbolUrl } from "@/api/scryfall";
@@ -29,29 +31,85 @@ import { ScryfallImg } from "@/components/ScryfallImg";
 import { HoverCardPreview } from "@/components/game/HoverCardPreview";
 import { useCardPreview } from "@/hooks/useCardPreview";
 import type { ManaCode } from "@/types/scryfall";
-
 const COLOR_FILTERS = [
-  { id: "W", label: "W", scryfall: "c:w", title: "White" },
-  { id: "U", label: "U", scryfall: "c:u", title: "Blue" },
-  { id: "B", label: "B", scryfall: "c:b", title: "Black" },
-  { id: "R", label: "R", scryfall: "c:r", title: "Red" },
-  { id: "G", label: "G", scryfall: "c:g", title: "Green" },
-  { id: "C", label: "C", scryfall: "c:c", title: "Colorless" },
-  { id: "M", label: "M", scryfall: "c:m", title: "Multicolor" },
+  {
+    id: "W",
+    label: `W`,
+    scryfall: "c:w",
+    title: `White`,
+  },
+  {
+    id: "U",
+    label: `U`,
+    scryfall: "c:u",
+    title: `Blue`,
+  },
+  {
+    id: "B",
+    label: `B`,
+    scryfall: "c:b",
+    title: `Black`,
+  },
+  {
+    id: "R",
+    label: `R`,
+    scryfall: "c:r",
+    title: `Red`,
+  },
+  {
+    id: "G",
+    label: `G`,
+    scryfall: "c:g",
+    title: `Green`,
+  },
+  {
+    id: "C",
+    label: `C`,
+    scryfall: "c:c",
+    title: `Colorless`,
+  },
+  {
+    id: "M",
+    label: `M`,
+    scryfall: "c:m",
+    title: `Multicolor`,
+  },
 ] as const;
-
 const TYPE_FILTERS = [
-  { id: "Creature", label: "Creature" },
-  { id: "Land", label: "Land" },
-  { id: "Instant", label: "Instant" },
-  { id: "Sorcery", label: "Sorcery" },
-  { id: "Enchantment", label: "Enchant." },
-  { id: "Artifact", label: "Artifact" },
-  { id: "Planeswalker", label: "PW" },
+  {
+    id: "Creature",
+    label: `Creature`,
+  },
+  {
+    id: "Land",
+    label: `Land`,
+  },
+  {
+    id: "Instant",
+    label: `Instant`,
+  },
+  {
+    id: "Sorcery",
+    label: `Sorcery`,
+  },
+  {
+    id: "Enchantment",
+    label: `Enchant.`,
+  },
+  {
+    id: "Artifact",
+    label: `Artifact`,
+  },
+  {
+    id: "Planeswalker",
+    label: `PW`,
+  },
 ] as const;
-
 const CMC_FILTERS = [
-  { id: "any", label: "Any" },
+  {
+    id: "any",
+    label: `Any`,
+  },
   { id: "0", label: "0" },
   { id: "1", label: "1" },
   { id: "2", label: "2" },
@@ -60,84 +118,247 @@ const CMC_FILTERS = [
   { id: "5", label: "5" },
   { id: "6", label: "6+" },
 ] as const;
-
 const RARITY_FILTERS = [
-  { id: "common", label: "C", title: "Common" },
-  { id: "uncommon", label: "U", title: "Uncommon" },
-  { id: "rare", label: "R", title: "Rare" },
-  { id: "mythic", label: "M", title: "Mythic" },
+  {
+    id: "common",
+    label: `C`,
+    title: `Common`,
+  },
+  {
+    id: "uncommon",
+    label: `U`,
+    title: `Uncommon`,
+  },
+  {
+    id: "rare",
+    label: `R`,
+    title: `Rare`,
+  },
+  {
+    id: "mythic",
+    label: `M`,
+    title: `Mythic`,
+  },
 ] as const;
-
 const FORMAT_FILTERS = [
-  { id: "standard", label: "Standard" },
-  { id: "pioneer", label: "Pioneer" },
-  { id: "modern", label: "Modern" },
-  { id: "legacy", label: "Legacy" },
-  { id: "vintage", label: "Vintage" },
-  { id: "commander", label: "Commander" },
-  { id: "pauper", label: "Pauper" },
-  { id: "premodern", label: "Premodern" },
-  { id: "historic", label: "Historic" },
-  { id: "brawl", label: "Brawl" },
-  { id: "alchemy", label: "Alchemy" },
-  { id: "explorer", label: "Explorer" },
-  { id: "penny", label: "Penny" },
-  { id: "oathbreaker", label: "Oathbreaker" },
+  {
+    id: "standard",
+    label: `Standard`,
+  },
+  {
+    id: "pioneer",
+    label: `Pioneer`,
+  },
+  {
+    id: "modern",
+    label: `Modern`,
+  },
+  {
+    id: "legacy",
+    label: `Legacy`,
+  },
+  {
+    id: "vintage",
+    label: `Vintage`,
+  },
+  {
+    id: "commander",
+    label: `Commander`,
+  },
+  {
+    id: "pauper",
+    label: `Pauper`,
+  },
+  {
+    id: "premodern",
+    label: `Premodern`,
+  },
+  {
+    id: "historic",
+    label: `Historic`,
+  },
+  {
+    id: "brawl",
+    label: `Brawl`,
+  },
+  {
+    id: "alchemy",
+    label: `Alchemy`,
+  },
+  {
+    id: "explorer",
+    label: `Explorer`,
+  },
+  {
+    id: "penny",
+    label: `Penny`,
+  },
+  {
+    id: "oathbreaker",
+    label: `Oathbreaker`,
+  },
 ] as const;
-
 const COLOR_IDENTITY_FILTERS = [
-  { id: "W", label: "W", scryfall: "id:w", title: "White" },
-  { id: "U", label: "U", scryfall: "id:u", title: "Blue" },
-  { id: "B", label: "B", scryfall: "id:b", title: "Black" },
-  { id: "R", label: "R", scryfall: "id:r", title: "Red" },
-  { id: "G", label: "G", scryfall: "id:g", title: "Green" },
+  {
+    id: "W",
+    label: `W`,
+    scryfall: "id:w",
+    title: `White`,
+  },
+  {
+    id: "U",
+    label: `U`,
+    scryfall: "id:u",
+    title: `Blue`,
+  },
+  {
+    id: "B",
+    label: `B`,
+    scryfall: "id:b",
+    title: `Black`,
+  },
+  {
+    id: "R",
+    label: `R`,
+    scryfall: "id:r",
+    title: `Red`,
+  },
+  {
+    id: "G",
+    label: `G`,
+    scryfall: "id:g",
+    title: `Green`,
+  },
 ] as const;
-
 const PRODUCES_FILTERS = [
-  { id: "W", label: "W", title: "White" },
-  { id: "U", label: "U", title: "Blue" },
-  { id: "B", label: "B", title: "Black" },
-  { id: "R", label: "R", title: "Red" },
-  { id: "G", label: "G", title: "Green" },
-  { id: "C", label: "C", title: "Colorless" },
+  {
+    id: "W",
+    label: `W`,
+    title: `White`,
+  },
+  {
+    id: "U",
+    label: `U`,
+    title: `Blue`,
+  },
+  {
+    id: "B",
+    label: `B`,
+    title: `Black`,
+  },
+  {
+    id: "R",
+    label: `R`,
+    title: `Red`,
+  },
+  {
+    id: "G",
+    label: `G`,
+    title: `Green`,
+  },
+  {
+    id: "C",
+    label: `C`,
+    title: `Colorless`,
+  },
 ] as const;
-
 const FRAME_FILTERS = [
-  { id: "old", label: "Old" },
-  { id: "modern", label: "Modern" },
-  { id: "future", label: "Future" },
+  {
+    id: "old",
+    label: `Old`,
+  },
+  {
+    id: "modern",
+    label: `Modern`,
+  },
+  {
+    id: "future",
+    label: `Future`,
+  },
 ] as const;
-
 const BORDER_FILTERS = [
-  { id: "black", label: "Black" },
-  { id: "white", label: "White" },
-  { id: "borderless", label: "Borderless" },
-  { id: "gold", label: "Gold" },
+  {
+    id: "black",
+    label: `Black`,
+  },
+  {
+    id: "white",
+    label: `White`,
+  },
+  {
+    id: "borderless",
+    label: `Borderless`,
+  },
+  {
+    id: "gold",
+    label: `Gold`,
+  },
 ] as const;
-
 const GAME_FILTERS = [
-  { id: "paper", label: "Paper" },
-  { id: "arena", label: "Arena" },
-  { id: "mtgo", label: "MTGO" },
+  {
+    id: "paper",
+    label: `Paper`,
+  },
+  {
+    id: "arena",
+    label: `Arena`,
+  },
+  {
+    id: "mtgo",
+    label: `MTGO`,
+  },
 ] as const;
-
 const SORT_OPTIONS = [
-  { id: "cmc", label: "Mana Value" },
-  { id: "name", label: "Name" },
-  { id: "set", label: "Set" },
-  { id: "released", label: "Release Date" },
-  { id: "rarity", label: "Rarity" },
-  { id: "color", label: "Color" },
-  { id: "power", label: "Power" },
-  { id: "toughness", label: "Toughness" },
-  { id: "edhrec", label: "EDHREC Rank" },
-  { id: "usd", label: "Price (USD)" },
-  { id: "eur", label: "Price (EUR)" },
-  { id: "artist", label: "Artist" },
+  {
+    id: "cmc",
+    label: `Mana Value`,
+  },
+  {
+    id: "name",
+    label: `Name`,
+  },
+  {
+    id: "set",
+    label: `Set`,
+  },
+  {
+    id: "released",
+    label: `Release Date`,
+  },
+  {
+    id: "rarity",
+    label: `Rarity`,
+  },
+  {
+    id: "color",
+    label: `Color`,
+  },
+  {
+    id: "power",
+    label: `Power`,
+  },
+  {
+    id: "toughness",
+    label: `Toughness`,
+  },
+  {
+    id: "edhrec",
+    label: `EDHREC Rank`,
+  },
+  {
+    id: "usd",
+    label: `Price (USD)`,
+  },
+  {
+    id: "eur",
+    label: `Price (EUR)`,
+  },
+  {
+    id: "artist",
+    label: `Artist`,
+  },
 ] as const;
-
 type CmcId = (typeof CMC_FILTERS)[number]["id"];
-
 interface AdvancedFilters {
   rarity: Set<string>;
   format: string;
@@ -164,7 +385,6 @@ interface AdvancedFilters {
   sort: string;
   sortDir: string;
 }
-
 const INITIAL_ADVANCED: AdvancedFilters = {
   rarity: new Set(),
   format: "",
@@ -191,46 +411,126 @@ const INITIAL_ADVANCED: AdvancedFilters = {
   sort: "",
   sortDir: "auto",
 };
-
 const IS_FILTERS = [
-  { id: "transform", label: "Transform" },
-  { id: "modal", label: "Modal DFC" },
-  { id: "split", label: "Split" },
-  { id: "flip", label: "Flip" },
-  { id: "adventure", label: "Adventure" },
-  { id: "meld", label: "Meld" },
-  { id: "saga", label: "Saga" },
-  { id: "leveler", label: "Level Up" },
-  { id: "vanilla", label: "Vanilla" },
-  { id: "token", label: "Token" },
-  { id: "spell", label: "Spell" },
-  { id: "permanent", label: "Permanent" },
-  { id: "foil", label: "Foil" },
-  { id: "nonfoil", label: "Non-Foil" },
-  { id: "promo", label: "Promo" },
-  { id: "digital", label: "Digital Only" },
-  { id: "textless", label: "Textless" },
-  { id: "fullart", label: "Full Art" },
-  { id: "funny", label: "Un-cards" },
-  { id: "booster", label: "In Boosters" },
-  { id: "commander", label: "Commander" },
-  { id: "reserved", label: "Reserved List" },
-  { id: "reprint", label: "Reprint" },
-  { id: "firstprint", label: "First Print" },
-  { id: "unique", label: "Unique Art" },
-  { id: "fetchland", label: "Fetchland" },
-  { id: "dualland", label: "Dual Land" },
-  { id: "shockland", label: "Shockland" },
+  {
+    id: "transform",
+    label: `Transform`,
+  },
+  {
+    id: "modal",
+    label: `Modal DFC`,
+  },
+  {
+    id: "split",
+    label: `Split`,
+  },
+  {
+    id: "flip",
+    label: `Flip`,
+  },
+  {
+    id: "adventure",
+    label: `Adventure`,
+  },
+  {
+    id: "meld",
+    label: `Meld`,
+  },
+  {
+    id: "saga",
+    label: `Saga`,
+  },
+  {
+    id: "leveler",
+    label: `Level Up`,
+  },
+  {
+    id: "vanilla",
+    label: `Vanilla`,
+  },
+  {
+    id: "token",
+    label: `Token`,
+  },
+  {
+    id: "spell",
+    label: `Spell`,
+  },
+  {
+    id: "permanent",
+    label: `Permanent`,
+  },
+  {
+    id: "foil",
+    label: `Foil`,
+  },
+  {
+    id: "nonfoil",
+    label: `Non-Foil`,
+  },
+  {
+    id: "promo",
+    label: `Promo`,
+  },
+  {
+    id: "digital",
+    label: `Digital Only`,
+  },
+  {
+    id: "textless",
+    label: `Textless`,
+  },
+  {
+    id: "fullart",
+    label: `Full Art`,
+  },
+  {
+    id: "funny",
+    label: `Un-cards`,
+  },
+  {
+    id: "booster",
+    label: `In Boosters`,
+  },
+  {
+    id: "commander",
+    label: `Commander`,
+  },
+  {
+    id: "reserved",
+    label: `Reserved List`,
+  },
+  {
+    id: "reprint",
+    label: `Reprint`,
+  },
+  {
+    id: "firstprint",
+    label: `First Print`,
+  },
+  {
+    id: "unique",
+    label: `Unique Art`,
+  },
+  {
+    id: "fetchland",
+    label: `Fetchland`,
+  },
+  {
+    id: "dualland",
+    label: `Dual Land`,
+  },
+  {
+    id: "shockland",
+    label: `Shockland`,
+  },
 ] as const;
-
 const COMPARISON_OPS = ["=", ">", "<", ">=", "<="] as const;
-
 function pushOrGroup(parts: string[], items: Set<string>, prefix: string) {
   if (items.size === 0) return;
   const clauses = [...items].map((v) => `${prefix}${v}`);
   parts.push(clauses.length === 1 ? clauses[0] : `(${clauses.join(" or ")})`);
 }
-
 function buildScryfallQuery(
   text: string,
   colors: Set<string>,
@@ -277,7 +577,6 @@ function buildScryfallQuery(
   for (const modifier of adv.is) parts.push(`is:${modifier}`);
   return parts.join(" ");
 }
-
 function countAdvancedFilters(adv: AdvancedFilters): number {
   let count = adv.rarity.size > 0 ? 1 : 0;
   if (adv.format) count++;
@@ -300,7 +599,6 @@ function countAdvancedFilters(adv: AdvancedFilters): number {
   count += adv.is.size;
   return count;
 }
-
 function FilterBtn({
   active,
   onClick,
@@ -331,7 +629,6 @@ function FilterBtn({
     </button>
   );
 }
-
 function ManaFilterBtn({
   symbol,
   active,
@@ -359,17 +656,14 @@ function ManaFilterBtn({
     </button>
   );
 }
-
 function FilterLabel({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">{children}</span>
   );
 }
-
 function FilterRow({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={cn("flex items-center gap-1.5", className)}>{children}</div>;
 }
-
 function FilterSeparator({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 pt-2 pb-1">
@@ -380,7 +674,6 @@ function FilterSeparator({ label }: { label: string }) {
     </div>
   );
 }
-
 function DraggableCardGrid({
   card,
   onMoreInfo,
@@ -402,7 +695,18 @@ function DraggableCardGrid({
     data: { card },
     disabled: dragDisabled,
   });
-
+  if (standalone) {
+    return (
+      <button
+        type="button"
+        onClick={onMoreInfo}
+        title={`Inspect ${card.identity.name}`}
+        className="block aspect-[5/7] w-full cursor-zoom-in rounded-lg text-left motion-safe:transition-transform motion-safe:hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <CardThumbnail card={card} loading="lazy" />
+      </button>
+    );
+  }
   return (
     <div
       ref={dragDisabled ? undefined : setNodeRef}
@@ -448,7 +752,6 @@ function DraggableCardGrid({
     </div>
   );
 }
-
 function DraggableCardRow({
   card,
   onMoreInfo,
@@ -470,9 +773,7 @@ function DraggableCardRow({
     data: { card },
     disabled: dragDisabled,
   });
-
   const typeStr = [...(card.supertypes ?? []), ...(card.types ?? [])].join(" ");
-
   return (
     <div
       ref={dragDisabled ? undefined : setNodeRef}
@@ -531,9 +832,10 @@ function DraggableCardRow({
     </div>
   );
 }
-
 interface CardSearchProps {
   standalone?: boolean;
+  initialSet?: string;
+  onSetChange?: (code: string) => void;
   onClose?: () => void;
   previewController?: ReturnType<typeof useCardPreview>;
   /** Shared rail slot — when provided, the hover preview portals into it
@@ -542,9 +844,10 @@ interface CardSearchProps {
   /** Bump to focus the search box (used by the deck editor's `/` shortcut). */
   focusSignal?: number;
 }
-
 export function CardSearch({
   standalone,
+  initialSet = "",
+  onSetChange,
   onClose,
   previewController,
   previewSlot,
@@ -563,31 +866,30 @@ export function CardSearch({
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
   const [activeCmc, setActiveCmc] = useState<CmcId>("any");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [cardSize, setCardSize] = useState(DEFAULT_CARD_SIZE);
   const [detailCard, setDetailCard] = useState<ScryfallCard | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [advanced, setAdvanced] = useState<AdvancedFilters>(INITIAL_ADVANCED);
-
+  const [advanced, setAdvanced] = useState<AdvancedFilters>(() => ({
+    ...INITIAL_ADVANCED,
+    set: initialSet,
+    sort: initialSet ? "color" : "",
+  }));
   const advCount = countAdvancedFilters(advanced);
   const basicCount = activeColors.size + activeTypes.size + (activeCmc !== "any" ? 1 : 0);
   const hasActiveFilters = basicCount > 0 || advCount > 0;
-
   const observerTarget = useRef(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
   const focusSearchInput = () => {
     searchInputRef.current?.focus();
     searchInputRef.current?.select();
   };
-
   // On the standalone search page CardSearch owns the `/` shortcut. As the
   // deck-editor panel the editor owns it (so it can open the panel first)
   // and drives focus through `focusSignal`.
   useKeybindings(standalone ? { "card-search-focus": focusSearchInput } : {});
-
   useEffect(() => {
     if (focusSignal) focusSearchInput();
   }, [focusSignal]);
-
   const effectiveQuery = buildScryfallQuery(
     debouncedText,
     activeColors,
@@ -600,12 +902,10 @@ export function CardSearch({
     advanced.sort || undefined,
     advanced.sortDir !== "auto" ? advanced.sortDir : undefined,
   );
-
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedText(text), 500);
     return () => clearTimeout(handler);
   }, [text]);
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -616,7 +916,6 @@ export function CardSearch({
     if (observerTarget.current) observer.observe(observerTarget.current);
     return () => observer.disconnect();
   }, [hasNextPage, fetchNextPage]);
-
   function toggleColor(id: string) {
     setActiveColors((prev) => {
       const n = new Set(prev);
@@ -643,30 +942,66 @@ export function CardSearch({
   }
   function setAdv<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]) {
     setAdvanced((prev) => ({ ...prev, [key]: value }));
+    if (key === "set") onSetChange?.(String(value));
   }
   function toggleAdvString(key: keyof AdvancedFilters, value: string) {
     setAdvanced((prev) => ({ ...prev, [key]: prev[key] === value ? "" : value }));
   }
-
   // Keep both DeckCard and raw ScryfallCard arrays in sync
   const rawCards: ScryfallCard[] = data?.pages.flatMap((p) => p.data) ?? [];
   const allCards: DeckCard[] = rawCards.map(scryfallToDeckCard);
-
+  const detailIndex = detailCard ? rawCards.findIndex((card) => card.id === detailCard.id) : -1;
+  useEffect(() => {
+    if (
+      detailIndex >= 0 &&
+      detailIndex >= rawCards.length - 3 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      void fetchNextPage();
+    }
+  }, [detailIndex, rawCards.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
   return (
     <div className="flex flex-col h-full w-full">
       <div
         className={cn(
-          "max-h-[60%] shrink-0 space-y-2 overflow-y-auto border-b py-3",
+          "max-h-[60%] shrink-0 space-y-3 overflow-y-auto border-b py-3",
           standalone ? "px-4 sm:px-6 lg:px-8" : "px-3",
         )}
       >
+        {standalone && (
+          <SetStudyToolbar
+            setCode={advanced.set}
+            onSetChange={(code) => setAdv("set", code)}
+            colors={COLOR_FILTERS}
+            activeColors={activeColors}
+            onColorToggle={toggleColor}
+            onClearColors={() => setActiveColors(new Set())}
+            rarities={advanced.rarity}
+            onRaritiesChange={(rarities) => setAdv("rarity", rarities)}
+            sort={advanced.sort}
+            onSortChange={(sort) => setAdv("sort", sort)}
+            sortOptions={SORT_OPTIONS}
+            cardSize={cardSize}
+            onCardSizeChange={setCardSize}
+            grid={viewMode === "grid"}
+            onReset={() => {
+              setText("");
+              setDebouncedText("");
+              setActiveColors(new Set());
+              setActiveTypes(new Set());
+              setActiveCmc("any");
+              setAdvanced({ ...INITIAL_ADVANCED, set: advanced.set, sort: "color" });
+            }}
+          />
+        )}
         <div className="flex gap-2">
           {onClose && (
             <Button
               size="icon"
               variant="ghost"
               className="h-8 w-8 shrink-0"
-              title="Close search panel"
+              title={`Close search panel`}
               onClick={onClose}
             >
               <PanelRightClose className="h-4 w-4" />
@@ -674,7 +1009,7 @@ export function CardSearch({
           )}
           <Input
             ref={searchInputRef}
-            placeholder="Search cards…"
+            placeholder={`Search cards\u2026`}
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="flex-1"
@@ -699,7 +1034,7 @@ export function CardSearch({
           <div className="flex border rounded-md overflow-hidden shrink-0">
             <button
               type="button"
-              title="Grid view"
+              title={`Grid view`}
               onClick={() => setViewMode("grid")}
               className={cn(
                 "px-2 py-1 text-xs transition-colors",
@@ -712,7 +1047,7 @@ export function CardSearch({
             </button>
             <button
               type="button"
-              title="List view"
+              title={`List view`}
               onClick={() => setViewMode("list")}
               className={cn(
                 "px-2 py-1 text-xs transition-colors border-l",
@@ -728,7 +1063,7 @@ export function CardSearch({
 
         {showFilters && (
           <div className="space-y-1 pt-1">
-            <FilterSeparator label="Colors & Mana" />
+            <FilterSeparator label={`Colors & Mana`} />
 
             <FilterRow>
               <FilterLabel>Color</FilterLabel>
@@ -790,13 +1125,13 @@ export function CardSearch({
               <FilterLabel>Mana</FilterLabel>
               <Input
                 className="h-7 text-xs w-40"
-                placeholder="e.g. {2}{W}{W}"
+                placeholder={`e.g. {2}{W}{W}`}
                 value={advanced.manaCost}
                 onChange={(e) => setAdv("manaCost", e.target.value)}
               />
             </FilterRow>
 
-            <FilterSeparator label="Card Properties" />
+            <FilterSeparator label={`Card Properties`} />
 
             <FilterRow className="flex-wrap">
               <FilterLabel>Type</FilterLabel>
@@ -902,13 +1237,13 @@ export function CardSearch({
               </div>
             </FilterRow>
 
-            <FilterSeparator label="Text Search" />
+            <FilterSeparator label={`Text Search`} />
 
             <FilterRow>
               <FilterLabel>Oracle</FilterLabel>
               <Input
                 className="h-7 text-xs flex-1"
-                placeholder="Card text contains…"
+                placeholder={`Card text contains\u2026`}
                 value={advanced.oracleText}
                 onChange={(e) => setAdv("oracleText", e.target.value)}
               />
@@ -918,7 +1253,7 @@ export function CardSearch({
               <FilterLabel>Flavor</FilterLabel>
               <Input
                 className="h-7 text-xs flex-1"
-                placeholder="Flavor text contains…"
+                placeholder={`Flavor text contains\u2026`}
                 value={advanced.flavorText}
                 onChange={(e) => setAdv("flavorText", e.target.value)}
               />
@@ -928,13 +1263,13 @@ export function CardSearch({
               <FilterLabel>Keyword</FilterLabel>
               <Input
                 className="h-7 text-xs flex-1"
-                placeholder="e.g. flying, haste, deathtouch"
+                placeholder={`e.g. flying, haste, deathtouch`}
                 value={advanced.keyword}
                 onChange={(e) => setAdv("keyword", e.target.value)}
               />
             </FilterRow>
 
-            <FilterSeparator label="Format & Legality" />
+            <FilterSeparator label={`Format & Legality`} />
 
             <FilterRow className="flex-wrap">
               <FilterLabel>Format</FilterLabel>
@@ -949,7 +1284,7 @@ export function CardSearch({
               ))}
             </FilterRow>
 
-            <FilterSeparator label="Printing & Availability" />
+            <FilterSeparator label={`Printing & Availability`} />
 
             <FilterRow className="flex-wrap">
               <FilterLabel>Set</FilterLabel>
@@ -957,7 +1292,7 @@ export function CardSearch({
               <FilterLabel>Artist</FilterLabel>
               <Input
                 className="h-7 text-xs flex-1"
-                placeholder="Artist name…"
+                placeholder={`Artist name\u2026`}
                 value={advanced.artist}
                 onChange={(e) => setAdv("artist", e.target.value)}
               />
@@ -1019,14 +1354,14 @@ export function CardSearch({
                 </span>
                 <Input
                   className="h-6 text-xs w-14"
-                  placeholder="en"
+                  placeholder={`en`}
                   value={advanced.language}
                   onChange={(e) => setAdv("language", e.target.value)}
                 />
               </div>
             </FilterRow>
 
-            <FilterSeparator label="Card Modifiers" />
+            <FilterSeparator label={`Card Modifiers`} />
 
             <FilterRow className="flex-wrap">
               <FilterLabel>Is</FilterLabel>
@@ -1041,7 +1376,7 @@ export function CardSearch({
               ))}
             </FilterRow>
 
-            <FilterSeparator label="Sort & Order" />
+            <FilterSeparator label={`Sort & Order`} />
 
             <FilterRow>
               <FilterLabel>Sort by</FilterLabel>
@@ -1071,8 +1406,13 @@ export function CardSearch({
         )}
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className={cn("py-3", standalone ? "px-4 sm:px-6 lg:px-8" : "px-3")}>
+          {data && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              {rawCards.length} of {data.pages[0].total_cards} cards
+            </p>
+          )}
           {status === "pending" && effectiveQuery && (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -1085,17 +1425,24 @@ export function CardSearch({
           )}
           {!effectiveQuery && (
             <p className="text-center text-sm text-muted-foreground py-12">
-              Enter a card name or select filters to search.
+              {standalone
+                ? "Choose a set to start studying, or search for any card."
+                : "Enter a card name or select filters to search."}
+            </p>
+          )}
+          {status === "success" && effectiveQuery && rawCards.length === 0 && (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              No cards match these filters. Try another color or reset your filters.
             </p>
           )}
 
           {viewMode === "grid" ? (
-            <div className="flex flex-wrap gap-3 pb-4">
+            <div className="flex flex-wrap justify-center gap-3 pb-4 sm:justify-start">
               {allCards.map((card, i) => (
                 <div
                   key={card.identity.id}
-                  className="shrink-0"
-                  style={{ width: standalone ? 130 : 110 }}
+                  className="max-w-full shrink-0"
+                  style={{ width: standalone ? CARD_WIDTH_MAP[cardSize] : 110 }}
                 >
                   <DraggableCardGrid
                     card={card}
@@ -1136,7 +1483,26 @@ export function CardSearch({
         </div>
       </ScrollArea>
 
-      {detailCard && <CardDetailModal card={detailCard} onClose={() => setDetailCard(null)} />}
+      {detailCard && (
+        <CardDetailModal
+          card={detailCard}
+          onClose={() => setDetailCard(null)}
+          navigation={
+            standalone && detailIndex >= 0
+              ? {
+                  position: detailIndex + 1,
+                  total: data?.pages[0].total_cards ?? rawCards.length,
+                  onPrevious:
+                    detailIndex > 0 ? () => setDetailCard(rawCards[detailIndex - 1]) : undefined,
+                  onNext:
+                    detailIndex < rawCards.length - 1
+                      ? () => setDetailCard(rawCards[detailIndex + 1])
+                      : undefined,
+                }
+              : undefined
+          }
+        />
+      )}
       {!previewController && (
         <HoverCardPreview preview={preview} slot={previewSlot} pinned imageSize="normal" />
       )}

@@ -4,8 +4,16 @@
 //! To add a new agent: define a struct implementing [`BotAgent`], add a
 //! variant to [`AgentKind`], and wire it in [`AgentKind::build`]. The room
 //! picks which agent to spawn via the `agent` field of the bot config.
+//!
+//! A hosted room may also answer its own bot seats in process rather than
+//! over the relay, and it builds that responder from the same configured
+//! agent (`self-hosted-node`'s `Config::bot_agent`). Anything that chooses an
+//! agent has to set that one field; a second, separate choice would win over
+//! the seat's own, because the relay's answer arrives later and is discarded
+//! as a duplicate -- with no error, and a legal-looking game.
 
 use manabrew_agent_interface::agent_impl::Responder;
+use manabrew_agent_interface::game_view_dto::GameViewDto;
 use manabrew_agent_interface::prompt::{
     AgentPrompt, ChooseActionOutput, ClientToServerMessage, PromptOutput,
 };
@@ -15,6 +23,7 @@ pub mod simple_ai;
 pub use simple_ai::SimpleAi;
 
 pub trait BotAgent: Send {
+    fn observe(&mut self, _view: GameViewDto) {}
     fn decide(&mut self, prompt: AgentPrompt) -> Option<PromptOutput>;
 }
 
@@ -47,6 +56,13 @@ impl BotResponder {
 impl Default for BotResponder {
     fn default() -> Self {
         Self::new(AgentKind::default().build())
+    }
+}
+
+impl BotResponder {
+    /// Feed the seat's latest view to the agent, as a state envelope would.
+    pub fn observe(&mut self, view: GameViewDto) {
+        self.agent.observe(view);
     }
 }
 

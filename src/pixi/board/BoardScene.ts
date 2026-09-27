@@ -278,6 +278,7 @@ export class BoardScene {
 
   private arrowSpecs: ArrowSpec[] = [];
   private castingArrow: { sourceCardId: string; hostile: boolean } | null = null;
+  private hoveredCombatArrow: ArrowSpec | null = null;
   private stackCardSeeds = new Map<string, { x: number; y: number; scale: number; ts: number }>();
   private lastCardPositions = new Map<
     string,
@@ -312,6 +313,7 @@ export class BoardScene {
   private delimTarget: number[] = [];
   private focusPlayerId: string | null = null;
   private combatFocusIds: string[] = [];
+  private targetingFocusIds: string[] | null = null;
   private manualFocusId: string | null = null;
   private hoveredOpponentId: string | null = null;
   private fogGfx: Graphics;
@@ -606,6 +608,21 @@ export class BoardScene {
     this.recomputeDelimTarget();
   }
 
+  setTargetingFocus(playerIds: string[] | null): void {
+    if (
+      (this.targetingFocusIds === null && playerIds === null) ||
+      (this.targetingFocusIds !== null &&
+        playerIds !== null &&
+        this.targetingFocusIds.length === playerIds.length &&
+        this.targetingFocusIds.every((id, i) => id === playerIds[i]))
+    ) {
+      return;
+    }
+    if (this.targetingFocusIds === null && playerIds !== null) this.hoveredOpponentId = null;
+    this.targetingFocusIds = playerIds;
+    this.recomputeDelimTarget();
+  }
+
   setManualFocus(playerId: string | null): void {
     if (this.manualFocusId === playerId) return;
     this.manualFocusId = playerId;
@@ -619,42 +636,53 @@ export class BoardScene {
   }
 
   private focusedOpponentIds(): string[] {
+    if (this.manualFocusId) return [this.manualFocusId];
+    if (this.targetingFocusIds !== null) {
+      if (!this.focusLocked && this.hoveredOpponentId) return [this.hoveredOpponentId];
+      const ids = new Set(this.targetingFocusIds);
+      for (const id of this.combatFocusIds) ids.add(id);
+      if (ids.size > 0) return [...ids];
+    }
     return this.combatFocusIds.length > 0
       ? this.combatFocusIds
-      : this.manualFocusId
-        ? [this.manualFocusId]
-        : !this.focusLocked && this.hoveredOpponentId
-          ? [this.hoveredOpponentId]
-          : this.focusPlayerId
-            ? [this.focusPlayerId]
-            : [];
+      : !this.focusLocked && this.hoveredOpponentId
+        ? [this.hoveredOpponentId]
+        : this.focusPlayerId
+          ? [this.focusPlayerId]
+          : [];
   }
 
   private recomputeDelimTarget(): void {
     const n = this.opponentIds.length;
-    if (this.overview) {
-      this.delimTarget = evenDelimiters(n);
-      return;
-    }
-    const focusIds = this.focusedOpponentIds();
     const focused = new Set<number>();
-    for (const id of focusIds) {
+    for (const id of this.focusedOpponentIds()) {
       const i = this.opponentIds.indexOf(id);
       if (i >= 0) focused.add(i);
     }
-    if (n <= 1 || this.boardWidth <= 0 || focused.size === 0) {
+    if (this.overview || n <= 1 || this.boardWidth <= 0 || focused.size === 0) {
       this.delimTarget = evenDelimiters(n);
-      return;
+    } else {
+      const banner = collapsedOpponentWidth(this.boardWidth, n) / this.boardWidth;
+      const each = Math.max(banner, (1 - (n - focused.size) * banner) / focused.size);
+      const target: number[] = [];
+      let acc = 0;
+      for (let i = 0; i < n - 1; i++) {
+        acc += focused.has(i) ? each : banner;
+        target.push(acc);
+      }
+      this.delimTarget = target;
     }
-    const banner = collapsedOpponentWidth(this.boardWidth, n) / this.boardWidth;
-    const each = Math.max(banner, (1 - (n - focused.size) * banner) / focused.size);
-    const target: number[] = [];
-    let acc = 0;
-    for (let i = 0; i < n - 1; i++) {
-      acc += focused.has(i) ? each : banner;
-      target.push(acc);
+    for (let i = 0; i < n; i++) {
+      const region = this.regions.get(this.opponentIds[i]!)?.region;
+      if (!region) continue;
+      if (this.overview || focused.size <= 1 || !focused.has(i)) {
+        region.setGridBand(null, 0);
+      } else {
+        const left = Math.round((i === 0 ? 0 : this.delimTarget[i - 1]!) * this.boardWidth);
+        const right = Math.round((i === n - 1 ? 1 : this.delimTarget[i]!) * this.boardWidth);
+        region.setGridBand(left, right - left);
+      }
     }
-    this.delimTarget = target;
   }
 
   private easeDelimiters(): void {
@@ -1176,7 +1204,11 @@ export class BoardScene {
   }
 
   updateRegionState(playerId: string, state: BattlefieldState): void {
-    this.regions.get(playerId)?.region.updateBattlefield(state);
+    const region = this.regions.get(playerId)?.region;
+    region?.updateBattlefield(state);
+    if (region && region === this.hoveredRegionRef && this.hoveredCardId) {
+      this.syncHoveredCombatTarget(region, this.hoveredCardId);
+    }
     this.refreshPhaseStripDim();
   }
 
@@ -1372,13 +1404,17 @@ export class BoardScene {
     this.overlayInvalidation?.();
     if (id === null) {
       this.attackDragTargetId = null;
+      const target =
+        this.hoveredCombatArrow?.to.kind === "card" ? this.hoveredCombatArrow.to.id : null;
+      this.updateAttackTargetRing(target, target !== null);
+    } else {
       this.updateAttackTargetRing(null);
     }
     this.callbacks.onAttackDragChange?.(id);
   }
 
-  private updateAttackTargetRing(cardId: string | null): void {
-    for (const rec of this.regions.values()) rec.region.setAttackTargetRing(cardId);
+  private updateAttackTargetRing(cardId: string | null, pulsing = false): void {
+    for (const rec of this.regions.values()) rec.region.setAttackTargetRing(cardId, pulsing);
   }
 
   /** Resolve a scene-space point (root-local, as `getCardPosition` returns) to a
@@ -1981,6 +2017,7 @@ export class BoardScene {
     this.hoveredRegionRef = region;
     this.hoveredCardId = sprite.card.id;
     region.setHoveredCard(sprite.card.id);
+    this.syncHoveredCombatTarget(region, sprite.card.id);
 
     this.callbacks.onHoverCard?.(sprite.card, this.toViewportBounds(sprite.getBounds()), {
       useAnchor: true,
@@ -1998,6 +2035,7 @@ export class BoardScene {
       this.hoveredRegionRef?.setHoveredCard(null);
       this.hoveredRegionRef = null;
       this.hoveredCardId = null;
+      this.syncHoveredCombatTarget(null, null);
       this.callbacks.onHoverCard?.(null);
     }, PREVIEW_TIMING.battlefieldHoverOutHoldMs);
   }
@@ -2009,6 +2047,25 @@ export class BoardScene {
     }
   }
 
+  private syncHoveredCombatTarget(region: BoardRegion | null, cardId: string | null): void {
+    const target = region && cardId ? region.getCombatTarget(cardId) : null;
+    this.hoveredCombatArrow = target
+      ? {
+          from: { kind: "card", id: target.attackerId },
+          to:
+            target.targetKind === "card"
+              ? { kind: "card", id: target.targetId }
+              : { kind: "player", id: target.targetId },
+          type: "attack",
+        }
+      : null;
+    if (!this.attackDragAttackerId) {
+      const targetCardId = target?.targetKind === "card" ? target.targetId : null;
+      this.updateAttackTargetRing(targetCardId, targetCardId !== null);
+    }
+    this.overlayInvalidation?.();
+  }
+
   private onBattlefieldCardDown(sprite: CardSprite, e: FederatedPointerEvent): void {
     if (this.destroyed) return;
     if (this.pinchStart) return;
@@ -2018,11 +2075,13 @@ export class BoardScene {
     if (this.declareBlockers && local.getLastState()?.selectableCardIds?.includes(sprite.card.id)) {
       this.setBlockDragId(sprite.card.id);
       this.activeGesturePointerId = e.pointerId;
+      this.syncHoveredCombatTarget(null, null);
       this.callbacks.onHoverCard?.(null);
       this.callbacks.onDismissHoverPreview?.();
       return;
     }
     this.callbacks.onHoverCard?.(null);
+    this.syncHoveredCombatTarget(null, null);
     const pos = this.root.toLocal(e.global);
     selection.setSelected(
       this.dragHandler.start(
@@ -2298,7 +2357,8 @@ export class BoardScene {
       !!this.castingArrow ||
       castDragging ||
       !!this.blockDragBlockerId ||
-      !!this.attackDragAttackerId;
+      !!this.attackDragAttackerId ||
+      !!this.hoveredCombatArrow;
     // Suppress the (card-anchored) combat arrows while the accordion eases so they
     // don't lag their moving targets — but keep live drag/casting arrows, or the
     // player loses targeting feedback exactly when combat opens the fields.
@@ -2307,13 +2367,17 @@ export class BoardScene {
     const canvasRect = this.app.canvas.getBoundingClientRect();
     const resolved: ArrowDef[] = [];
     const attackTargetCounts = new Map<string, number>();
-    for (const s of this.arrowSpecs) {
+    const specCount = this.arrowSpecs.length + (this.hoveredCombatArrow ? 1 : 0);
+    for (let index = 0; index < specCount; index++) {
+      const s = index < this.arrowSpecs.length ? this.arrowSpecs[index]! : this.hoveredCombatArrow!;
       if (s.type === "attack" && s.to.kind === "player") {
         attackTargetCounts.set(s.to.id, (attackTargetCounts.get(s.to.id) ?? 0) + 1);
       }
     }
     const attackTargetSeen = new Map<string, number>();
-    for (const spec of this.arrowSpecs) {
+    for (let index = 0; index < specCount; index++) {
+      const spec =
+        index < this.arrowSpecs.length ? this.arrowSpecs[index]! : this.hoveredCombatArrow!;
       let from = this.resolveArrowEndpoint(spec.from, canvasRect);
       const to = this.resolveTargetEndpoint(spec.to, canvasRect);
       if (!from || !to) continue;

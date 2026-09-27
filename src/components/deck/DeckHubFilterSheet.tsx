@@ -11,16 +11,15 @@ import {
 } from "@/components/ui/sheet";
 import type { DeckHubDiscoveryFilters } from "@/components/deck/deckHub.types";
 import type { DeckHubFacets } from "@/api/hubTypes";
-
 interface DeckHubFilterSheetProps {
   filters: DeckHubDiscoveryFilters;
   facets: DeckHubFacets | null;
+  facetsLoading: boolean;
   activeFilterCount: number;
   favoritesEnabled: boolean;
   onChange: (patch: Partial<DeckHubDiscoveryFilters>) => void;
   onClear: () => void;
 }
-
 export function DeckHubFilterSheet(props: DeckHubFilterSheetProps) {
   return (
     <Sheet>
