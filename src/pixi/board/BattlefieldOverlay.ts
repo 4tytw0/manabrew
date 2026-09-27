@@ -286,11 +286,12 @@ export class BattlefieldOverlay {
       hoverAlpha = ACTION_BUTTON_HOVER_ALPHA;
     }
     const selectionOnly = kind.isSelectable && !kind.isTappable && !kind.isUntappable;
-    const controlX = selectionOnly ? 0 : 6;
     const cardHeight = this.cardHeight();
-    const controlY = selectionOnly ? 0 : (cardHeight - 40) / 2;
-    const controlW = selectionOnly ? CARD_W : CARD_W - 12;
-    const controlH = selectionOnly ? cardHeight : 40;
+    const fullCardButton = selectionOnly || cardHeight === CARD_W;
+    const controlX = fullCardButton ? 0 : 6;
+    const controlY = fullCardButton ? 0 : (cardHeight - 40) / 2;
+    const controlW = fullCardButton ? CARD_W : CARD_W - 12;
+    const controlH = fullCardButton ? cardHeight : 40;
 
     const btn = new Graphics();
     const paintBtn = (highlighted: boolean) => {
@@ -321,7 +322,7 @@ export class BattlefieldOverlay {
         paintBtn(highlighted);
         centerIcon.scale.set(iconScale * (highlighted ? ICON_HOVER_SCALE : 1));
       },
-      selectionOnly,
+      fullCardButton,
     );
   }
 

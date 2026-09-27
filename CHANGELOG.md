@@ -8,6 +8,7 @@
 * **ui:** expose all mobile combat stops and restore taps after cancelled hand peeks
 * **ui:** fit compact square cards to bottom-anchored fields and retain accessible overflow stacks
 * **ui:** fit two opponent rows and two or three local rows in compact square-card fields
+* **ui:** fill compact tap and untap overlays while preserving card dragging
 * **ui:** expand mobile choice prompts with readable rows and a scrollable option list
 * **ui:** fit mobile Pass, turn-skip, autopass, and settings into one short action row
 * **ui:** update live zone locks and keep narrow desktop source-card prompts usable
