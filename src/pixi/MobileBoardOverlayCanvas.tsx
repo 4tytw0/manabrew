@@ -10,5 +10,11 @@ function createMobilePromptLayer(app: Application, callbacks: PromptLayerCallbac
 }
 
 export function MobileBoardOverlayCanvas(props: BoardOverlayCanvasProps) {
-  return <BoardOverlayCanvasSurface {...props} createPromptLayer={createMobilePromptLayer} />;
+  return (
+    <BoardOverlayCanvasSurface
+      {...props}
+      createPromptLayer={createMobilePromptLayer}
+      compactStack
+    />
+  );
 }

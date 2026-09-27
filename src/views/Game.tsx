@@ -667,25 +667,22 @@ export default function Game({ exitTo }: GameProps = {}) {
       clientX: number;
       clientY: number;
     },
-  ) => {
+  ): HandActionOption["kind"] | null => {
     if (manualApi) {
       preview.showSticky(card, e?.clientX, e?.clientY);
-      return;
+      return null;
     }
     const actions = getHandActionOptions(card);
     if (actions.length === 0) {
-      if (playableIds.has(card.id)) {
-        handleCastSpell(card.id);
-      }
-      return;
+      if (playableIds.has(card.id)) handleCastSpell(card.id);
+      return null;
     }
     if (actions.length === 1) {
-      respondHandAction(actions[0]);
-      return;
+      return respondHandAction(actions[0]) ? actions[0].kind : null;
     }
     if (e) {
       preview.showSticky(card, e.clientX, e.clientY);
-      return;
+      return null;
     }
     openPlayModePicker({
       cardId: card.id,
@@ -694,6 +691,7 @@ export default function Game({ exitTo }: GameProps = {}) {
       promptId: currentPrompt!.promptId,
       source: card,
     });
+    return null;
   };
   const handleHandCardInspect = (card: CardDto, e: { clientX: number; clientY: number }) => {
     preview.showSticky(card, e.clientX, e.clientY);
@@ -857,6 +855,7 @@ export default function Game({ exitTo }: GameProps = {}) {
     });
   }
   function closeZone() {
+    preview.dismiss();
     closeZoneViewer();
   }
   function openZoneAndCast(
@@ -1392,7 +1391,11 @@ export default function Game({ exitTo }: GameProps = {}) {
                 if (viewingZone.mode === "cast" || viewingZone.mode === "browse") {
                   if (viewingZone.mode === "browse")
                     openZoneViewer({ ...viewingZone, mode: "cast" });
-                  handleHandCardAction(card);
+                  const actionKind = handleHandCardAction(card);
+                  if (viewingZone.source?.zone === "commandZone" && actionKind) {
+                    closeZoneViewer();
+                    if (actionKind === "cast") viewingZone.onClickCard?.(cardId);
+                  }
                 } else if (viewingZone.mode === "target") casting.wrappedTargetCard(cardId);
                 else if (viewingZone.mode === "cost") handleDelveCard(cardId);
                 else if (manualApi && viewingZone.source && gameView) {
@@ -2503,19 +2506,7 @@ export default function Game({ exitTo }: GameProps = {}) {
             }
             openZone(title, cards, onClickCard, clickableCardIds, targetHostile);
           }}
-          onOpenZoneAndCast={(title, cards, onClickCard, clickableCardIds) =>
-            openZoneAndCast(
-              title,
-              cards,
-              (cardId) => {
-                const card = cards.find((c) => c.id === cardId);
-                if (card) handleHandCardAction(card);
-                else handleCastSpell(cardId);
-                onClickCard(cardId);
-              },
-              clickableCardIds,
-            )
-          }
+          onOpenZoneAndCast={openZoneAndCast}
           delveAvailable={delveSourceIds.length > 0}
           onOpenDelveZone={openDelveZone}
           onTargetFromZone={(cardId) => {
@@ -2690,7 +2681,16 @@ export default function Game({ exitTo }: GameProps = {}) {
                 )
               : []
           }
-          onSelect={respondHandAction}
+          onSelect={(option) => {
+            if (
+              respondHandAction(option) &&
+              viewingZone?.source?.zone === "commandZone" &&
+              playModePicker.cardId === option.cardId
+            ) {
+              closeZoneViewer();
+              if (option.kind === "cast") viewingZone.onClickCard?.(option.cardId);
+            }
+          }}
           onCancel={closePlayModePicker}
         />
       )}

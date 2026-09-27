@@ -119,6 +119,7 @@ type PromptLayerFactory = (app: Application, callbacks: PromptLayerCallbacks) =>
 
 interface BoardOverlayCanvasSurfaceProps extends BoardOverlayCanvasProps {
   createPromptLayer: PromptLayerFactory;
+  compactStack: boolean;
 }
 function syncPromptViewport(
   prompt: PromptLayer,
@@ -263,6 +264,7 @@ export function BoardOverlayCanvasSurface({
   onTogglePreviewView,
   onLongPressCard,
   createPromptLayer,
+  compactStack,
 }: BoardOverlayCanvasSurfaceProps) {
   const theme = useTheme();
   const { i18n } = useLingui();
@@ -475,16 +477,20 @@ export function BoardOverlayCanvasSurface({
           );
         };
 
-        stack = new StackLayer(themeRef.current, {
-          onTargetSpell: (id) => cbRef.current.onTargetSpell(id),
-          onHover: (id) => {
-            setHoveredStackObjectId(id);
-            cbRef.current.onHoverStack(id);
+        stack = new StackLayer(
+          themeRef.current,
+          {
+            onTargetSpell: (id) => cbRef.current.onTargetSpell(id),
+            onHover: (id) => {
+              setHoveredStackObjectId(id);
+              cbRef.current.onHoverStack(id);
+            },
+            onToggleCollapsed: () => cbRef.current.onToggleStack(),
+            onRenderRequested: () => scheduler?.request(),
+            onLongPressCard: showLongPressCard,
           },
-          onToggleCollapsed: () => cbRef.current.onToggleStack(),
-          onRenderRequested: () => scheduler?.request(),
-          onLongPressCard: showLongPressCard,
-        });
+          compactStack,
+        );
         stackRef.current = stack;
         stack.setViewport(width, height);
         stack.setSpec(stackSpecRef.current);
@@ -626,7 +632,7 @@ export function BoardOverlayCanvasSurface({
       if (initialized) teardown();
       else if (appRef.current === app) appRef.current = null;
     };
-  }, [createPromptLayer]);
+  }, [createPromptLayer, compactStack]);
 
   useEffect(() => {
     stackSpecRef.current = stackSpec;
@@ -844,7 +850,7 @@ export function BoardOverlayCanvasSurface({
         !currentPreview.suppressed &&
         Date.now() - stickyOpenedAtRef.current >= GHOST_CLICK_ARM_MS;
 
-      if (!stickyOpen || hit.preview || hit.prompt) return;
+      if (!stickyOpen || hit.preview || (hit.prompt && event.pointerType !== "touch")) return;
       cbRef.current.onDismissPreview?.();
       schedulerRef.current?.request();
       if (

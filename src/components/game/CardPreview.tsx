@@ -301,22 +301,33 @@ export function CardPreview({
         onSelectAction!(action);
       }
     }
-    function handleClick(e: PointerEvent) {
-      const target = e.target as HTMLElement;
-      if (!target.closest("[data-card-preview]")) {
-        onDismiss!();
+    function handleOutsidePointerDown(e: PointerEvent) {
+      const target = e.target;
+      if (target instanceof Element && target.closest("[data-card-preview]")) return;
+      if (e.pointerType === "touch") {
+        const pointerId = e.pointerId;
+        const suppressClick = (click: MouseEvent) => {
+          if (click.detail === 0) return;
+          if (click instanceof PointerEvent && click.pointerId !== pointerId) return;
+          click.preventDefault();
+          click.stopImmediatePropagation();
+          window.removeEventListener("click", suppressClick, true);
+        };
+        window.addEventListener("click", suppressClick, true);
+        window.setTimeout(() => window.removeEventListener("click", suppressClick, true), 500);
+        e.preventDefault();
+        e.stopImmediatePropagation();
       }
+      onDismiss!();
     }
     window.addEventListener("keydown", handleKey, { capture: !!portalTarget });
     const timer = setTimeout(() => {
-      if (isSticky) {
-        window.addEventListener("pointerdown", handleClick);
-      }
+      if (isSticky) window.addEventListener("pointerdown", handleOutsidePointerDown, true);
     }, GHOST_CLICK_ARM_MS);
     return () => {
       window.removeEventListener("keydown", handleKey, { capture: !!portalTarget });
       clearTimeout(timer);
-      window.removeEventListener("pointerdown", handleClick);
+      window.removeEventListener("pointerdown", handleOutsidePointerDown, true);
     };
   }, [
     hasActions,

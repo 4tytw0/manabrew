@@ -100,7 +100,8 @@ export function ZoneViewer({
           onClickCard
             ? (item) => {
                 onClickCard(item.id);
-                if (mode === "browse" || mode === "cast") onClose();
+                if ((mode === "browse" || mode === "cast") && source?.zone !== "commandZone")
+                  onClose();
               }
             : undefined
         }

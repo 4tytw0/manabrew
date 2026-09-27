@@ -8,10 +8,17 @@ import { hexToNum } from "../colorUtils";
 import { animationsEnabled } from "../effects/enabled";
 import type { ScreenBounds, ScreenPos } from "../types";
 import { HOVER_SCALE, StackCardSprite } from "./StackCardSprite";
-import { computeStackLayout, reconcileStackHover } from "./stackLayout";
+import {
+  computeStackLayout,
+  reconcileStackHover,
+  STACK_COMPACT_BOTTOM_RESERVE,
+  STACK_COMPACT_TOP_INSET,
+  STACK_OFFSET_Y,
+} from "./stackLayout";
 import type { StackAnchorProvider, StackCallbacks, StackSpec } from "./stack.types";
 
 const MAX_CARD_HEIGHT_FRAC = 0.55;
+const COMPACT_MAX_CARD_HEIGHT_FRAC = 0.69;
 const HOVER_MOVE_MS = 0.16;
 const HOVER_EASE = "power2.out";
 
@@ -30,6 +37,7 @@ export class StackLayer implements StackAnchorProvider {
   readonly container: Container;
   private theme: Theme;
   private readonly callbacks: StackCallbacks;
+  private readonly compact: boolean;
   private sprites = new Map<string, StackCardSprite>();
   private faceOverrides = new Map<string, boolean>();
   private rulesViewOverrides = new Map<string, boolean>();
@@ -69,8 +77,16 @@ export class StackLayer implements StackAnchorProvider {
 
   private cardWidth(): number {
     if (this.viewH <= 0) return GAME_CARD_SIZES.preview.width;
-    const maxW = (this.viewH * MAX_CARD_HEIGHT_FRAC * CARD_W) / CARD_H;
-    return Math.min(GAME_CARD_SIZES.preview.width, maxW);
+    const height = this.compact
+      ? Math.min(
+          this.viewH * COMPACT_MAX_CARD_HEIGHT_FRAC,
+          this.viewH -
+            STACK_COMPACT_TOP_INSET -
+            STACK_COMPACT_BOTTOM_RESERVE -
+            Math.max(0, this.spec.cards.length - 1) * STACK_OFFSET_Y,
+        )
+      : this.viewH * MAX_CARD_HEIGHT_FRAC;
+    return Math.min(GAME_CARD_SIZES.preview.width, (height * CARD_W) / CARD_H);
   }
 
   private faceScale(): number {
@@ -81,9 +97,10 @@ export class StackLayer implements StackAnchorProvider {
     return CARD_H * this.faceScale();
   }
 
-  constructor(theme: Theme, callbacks: StackCallbacks) {
+  constructor(theme: Theme, callbacks: StackCallbacks, compact = false) {
     this.theme = theme;
     this.callbacks = callbacks;
+    this.compact = compact;
     this.container = new Container();
     this.container.sortableChildren = true;
 
@@ -131,8 +148,13 @@ export class StackLayer implements StackAnchorProvider {
 
   setViewport(width: number, height: number): void {
     if (this.viewW === width && this.viewH === height) return;
+    const previousCardWidth = this.cardWidth();
     this.viewW = width;
     this.viewH = height;
+    if (this.flashSprite && this.cardWidth() !== previousCardWidth) {
+      gsap.killTweensOf(this.flashSprite.scale);
+      this.flashSprite.scale.set(this.faceScale());
+    }
     if (this.sprites.size > 0 && this.cardWidth() !== this.builtCardWidth) {
       for (const sprite of this.sprites.values()) sprite.destroy();
       this.sprites.clear();
@@ -148,7 +170,21 @@ export class StackLayer implements StackAnchorProvider {
   }
 
   setSpec(spec: StackSpec): void {
+    const previousCardWidth = this.cardWidth();
     this.spec = spec;
+    if (this.sprites.size > 0 && this.cardWidth() !== this.builtCardWidth) {
+      for (const sprite of this.sprites.values()) sprite.destroy();
+      this.sprites.clear();
+      if (this.hoveredId !== null) {
+        this.hoveredId = null;
+        this.callbacks.onHover(null);
+      }
+      this.prevCardIds = new Set();
+    }
+    if (this.flashSprite && this.cardWidth() !== previousCardWidth) {
+      gsap.killTweensOf(this.flashSprite.scale);
+      this.flashSprite.scale.set(this.faceScale());
+    }
     const seen = new Set<string>();
     const incoming = new Set(spec.cards.map((c) => c.id));
     const reusableBySource = new Map<string, string>();
@@ -482,6 +518,7 @@ export class StackLayer implements StackAnchorProvider {
       hoverScale: HOVER_SCALE,
       buttonWidth: BTN_W,
       buttonGap: BTN_GAP,
+      compact: this.compact,
     });
 
     let moveDur: number | undefined;
@@ -517,11 +554,12 @@ export class StackLayer implements StackAnchorProvider {
         height: halfH * 2,
       };
     } else {
+      const hoverOverflow = this.compact ? (this.cardHeight() * (HOVER_SCALE - 1)) / 2 : 0;
       this.bounds = {
         x: layout.panelLeft,
-        y: layout.panelTop,
+        y: layout.panelTop - hoverOverflow,
         width: layout.pileWidth,
-        height: layout.pileHeight,
+        height: layout.pileHeight + 2 * hoverOverflow,
       };
     }
 

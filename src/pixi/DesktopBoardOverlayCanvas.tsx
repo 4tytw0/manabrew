@@ -10,5 +10,11 @@ function createDesktopPromptLayer(app: Application, callbacks: PromptLayerCallba
 }
 
 export function DesktopBoardOverlayCanvas(props: BoardOverlayCanvasProps) {
-  return <BoardOverlayCanvasSurface {...props} createPromptLayer={createDesktopPromptLayer} />;
+  return (
+    <BoardOverlayCanvasSurface
+      {...props}
+      createPromptLayer={createDesktopPromptLayer}
+      compactStack={false}
+    />
+  );
 }

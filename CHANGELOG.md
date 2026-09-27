@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Fixes
+* **ui:** grow compact stack cards while keeping short-screen controls clear
+* **ui:** return to the battlefield after casting from the command zone
+* **ui:** dismiss touch card previews with one outside tap without activating the card beneath
 
 * **ui:** keep printed and rules card inspection above stacked zone viewers
 * **ui:** keep the mobile account avatar circular at touch-target size

@@ -1257,8 +1257,8 @@ export function GameBoard({
       );
       return;
     }
-    if ((commandPlayableIds?.length ?? 0) > 0 && promptType === "chooseAction") {
-      onOpenZoneAndCast("Your Command Zone", myCommandZone, (_cardId) => {}, commandPlayableIds);
+    if (promptType === "chooseAction") {
+      onOpenZoneAndCast("Your Command Zone", myCommandZone, closePlayerSheet, commandPlayableIds);
     } else {
       onOpenZone("Your Command Zone", myCommandZone);
     }
@@ -1272,6 +1272,7 @@ export function GameBoard({
     commandPlayableIds,
     promptType,
     onOpenZoneAndCast,
+    closePlayerSheet,
   ]);
   const openGraveyard = useCallback(() => {
     if (delveAvailable && onOpenDelveZone) {
