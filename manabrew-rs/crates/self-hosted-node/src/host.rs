@@ -2178,11 +2178,13 @@ fn route_remote_directive(
     info!(claimed_slot, player_index, ?directive, "routing directive");
     match directive {
         DirectiveInput::Concede => concede_seat(engine_session, player_index),
-        DirectiveInput::RequestRestore { .. } => send_seat_message(
-            engine_session,
-            player_index,
-            ClientToServerMessage::Directive { directive },
-        ),
+        DirectiveInput::RequestRestore { .. } | DirectiveInput::RestoreVote { .. } => {
+            send_seat_message(
+                engine_session,
+                player_index,
+                ClientToServerMessage::Directive { directive },
+            )
+        }
     }
 }
 

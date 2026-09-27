@@ -44,10 +44,12 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -73,10 +75,10 @@ public final class ManaBrewInteractiveSession {
     private int nextCheckpointId = 1;
     private int checkpointTurn = -1;
     private PhaseType checkpointPhase;
-    private Checkpoint requestedRestore;
-    private int restoreRequester = -1;
-    private int restoreVoteId;
+    private RestoreVote restoreVote;
+    private int restoreVoteCount;
     private volatile Map<String, Object> restoreVoteView;
+    private volatile long stateRevision;
     private boolean priorityPromptOpen;
     private Set<Integer> botSeats = Set.of();
 
@@ -101,6 +103,24 @@ public final class ManaBrewInteractiveSession {
             this.activePlayer = activePlayer;
             this.priorityPlayer = priorityPlayer;
             this.snapshot = snapshot;
+        }
+    }
+
+    private enum RestoreVoteStatus { PENDING, APPROVED, DECLINED, UNAVAILABLE }
+
+    private static final class RestoreVote {
+        private final int id;
+        private final Checkpoint checkpoint;
+        private final int requester;
+        private final Set<Integer> awaiting;
+        private RestoreVoteStatus status = RestoreVoteStatus.PENDING;
+        private int decliner = -1;
+
+        private RestoreVote(final int id, final Checkpoint checkpoint, final int requester, final Set<Integer> awaiting) {
+            this.id = id;
+            this.checkpoint = checkpoint;
+            this.requester = requester;
+            this.awaiting = awaiting;
         }
     }
 
@@ -239,6 +259,10 @@ public final class ManaBrewInteractiveSession {
         return game != null && game.isGameOver();
     }
 
+    public long getStateRevision() {
+        return stateRevision;
+    }
+
     boolean isClosed() {
         return closed;
     }
@@ -346,7 +370,7 @@ public final class ManaBrewInteractiveSession {
             } finally {
                 priorityPromptOpen = false;
             }
-            if (action.has("kind") && "request_restore".equals(action.get("kind").getAsString())) {
+            if (isRestoreDirective(action)) {
                 return new PriorityChoice(PriorityActionKind.RESTORE, null, null, null);
             }
             try {
@@ -1938,10 +1962,21 @@ public final class ManaBrewInteractiveSession {
                 continue;
             }
             final String kind = action.has("kind") ? action.get("kind").getAsString() : "";
-            if ("request_restore".equals(kind)) {
-                requestRestore(action.get("player").getAsInt(), action.get("checkpointId").getAsInt());
-                if (priorityPromptOpen && requestedRestore != null) {
+            if (isRestoreDirective(action)) {
+                if ("request_restore".equals(kind)) {
+                    requestRestore(action.get("player").getAsInt(), action.get("checkpointId").getAsInt());
+                } else {
+                    castRestoreVote(
+                            action.get("player").getAsInt(),
+                            action.get("voteId").getAsInt(),
+                            action.get("accept").getAsBoolean());
+                }
+                if (priorityPromptOpen && restoreApproved()) {
                     return action;
+                }
+                stateRevision++;
+                if (bridge != null) {
+                    bridge.publishState();
                 }
                 continue;
             }
@@ -1979,35 +2014,32 @@ public final class ManaBrewInteractiveSession {
     }
 
     boolean restoreIfApproved() {
-        final Checkpoint target = requestedRestore;
-        if (target == null) {
+        if (!restoreApproved()) {
             return false;
         }
-        final int requester = restoreRequester;
-        requestedRestore = null;
-        restoreRequester = -1;
-        if (!checkpoints.contains(target)) {
-            publishRestoreVote(target, requester, Map.of("type", "unavailable"));
+        final RestoreVote vote = restoreVote;
+        if (!checkpoints.contains(vote.checkpoint)) {
+            vote.status = RestoreVoteStatus.UNAVAILABLE;
+            publishRestoreVote();
             return false;
         }
-        final Player decliner = restoreDecliner(target, requester);
-        if (decliner != null) {
-            publishRestoreVote(target, requester,
-                    Map.of("type", "declined", "playerId", "player-" + SnapshotExtractor.playerIndex(game, decliner)));
-            return false;
-        }
-        restore(target);
-        publishRestoreVote(target, requester, Map.of("type", "approved"));
+        restore(vote.checkpoint);
+        vote.status = RestoreVoteStatus.APPROVED;
+        publishRestoreVote();
         return true;
     }
 
-    private void publishRestoreVote(final Checkpoint target, final int requester, final Map<String, Object> status) {
-        final Map<String, Object> view = new LinkedHashMap<>();
-        view.put("voteId", restoreVoteId);
-        view.put("checkpointId", target.id);
-        view.put("requestedByPlayerId", "player-" + requester);
-        view.put("status", status);
-        restoreVoteView = view;
+    private static boolean isRestoreDirective(final JsonObject action) {
+        final String kind = action.has("kind") ? action.get("kind").getAsString() : "";
+        return "request_restore".equals(kind) || "restore_vote".equals(kind);
+    }
+
+    private boolean restoreApproved() {
+        if (restoreVote == null || restoreVote.status != RestoreVoteStatus.PENDING) {
+            return false;
+        }
+        restoreVote.awaiting.removeIf(seat -> game.getRegisteredPlayers().get(seat).hasLost());
+        return restoreVote.awaiting.isEmpty();
     }
 
     private void recordCheckpoint() {
@@ -2041,40 +2073,59 @@ public final class ManaBrewInteractiveSession {
     }
 
     private void requestRestore(final int requester, final int checkpointId) {
-        if (requestedRestore != null) {
-            return;
-        }
         final List<Player> players = game.getRegisteredPlayers();
-        if (requester < 0 || requester >= players.size() || players.get(requester).hasLost()) {
+        if ((restoreVote != null && restoreVote.status == RestoreVoteStatus.PENDING)
+                || players.get(requester).hasLost()) {
             return;
         }
         for (final Checkpoint checkpoint : checkpoints) {
             if (checkpoint.id == checkpointId) {
-                requestedRestore = checkpoint;
-                restoreRequester = requester;
-                restoreVoteId++;
-                publishRestoreVote(checkpoint, requester, Map.of("type", "pending"));
+                final Set<Integer> voters = new TreeSet<>();
+                for (final Player player : players) {
+                    final int seat = SnapshotExtractor.playerIndex(game, player);
+                    if (seat != requester && !player.hasLost() && !botSeats.contains(seat)
+                            && player.getOriginalLobbyPlayer() instanceof ManaBrewInteractiveLobbyPlayer) {
+                        voters.add(seat);
+                    }
+                }
+                restoreVote = new RestoreVote(++restoreVoteCount, checkpoint, requester, voters);
+                publishRestoreVote();
                 return;
             }
         }
     }
 
-    private Player restoreDecliner(final Checkpoint target, final int requester) {
-        final String body = game.getRegisteredPlayers().get(requester).getName()
-                + " asks to restore the game to turn " + target.turn + ", "
-                + target.phase.nameForUi + ".";
-        for (final Player voter : game.getRegisteredPlayers()) {
-            final int index = SnapshotExtractor.playerIndex(game, voter);
-            if (index == requester || voter.hasLost() || botSeats.contains(index)
-                    || !(voter.getOriginalLobbyPlayer() instanceof ManaBrewInteractiveLobbyPlayer)) {
-                continue;
-            }
-            if (!awaitBooleanChoice("confirm_action", index, "Restore the game?", null, "confirm_restore",
-                    null, null, List.of("Yes", "No"), false, null, null, null, body)) {
-                return voter;
-            }
+    private void castRestoreVote(final int voter, final int voteId, final boolean accept) {
+        if (restoreVote == null || restoreVote.status != RestoreVoteStatus.PENDING
+                || restoreVote.id != voteId || !restoreVote.awaiting.remove(voter)) {
+            return;
         }
-        return null;
+        if (!accept) {
+            restoreVote.status = RestoreVoteStatus.DECLINED;
+            restoreVote.decliner = voter;
+        }
+        publishRestoreVote();
+    }
+
+    private void publishRestoreVote() {
+        final Map<String, Object> status = new LinkedHashMap<>();
+        status.put("type", restoreVote.status.name().toLowerCase(Locale.ROOT));
+        if (restoreVote.status == RestoreVoteStatus.DECLINED) {
+            status.put("playerId", "player-" + restoreVote.decliner);
+        }
+        final List<String> awaiting = new ArrayList<>();
+        for (final int seat : restoreVote.awaiting) {
+            awaiting.add("player-" + seat);
+        }
+        final Map<String, Object> view = new LinkedHashMap<>();
+        view.put("voteId", restoreVote.id);
+        final Checkpoint checkpoint = restoreVote.checkpoint;
+        view.put("checkpoint", InteractiveSnapshotExtractor.checkpointView(
+                game, checkpoint.id, checkpoint.turn, checkpoint.phase, checkpoint.activePlayer));
+        view.put("requestedByPlayerId", "player-" + restoreVote.requester);
+        view.put("awaitingPlayerIds", awaiting);
+        view.put("status", status);
+        restoreVoteView = view;
     }
 
     private void restore(final Checkpoint target) {

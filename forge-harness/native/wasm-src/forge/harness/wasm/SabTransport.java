@@ -313,11 +313,26 @@ public final class SabTransport implements InteractiveBridge {
         if (turn >= 0) {
             turnNow = turn;
         }
-        // The client reads state.gameView, matching GameSnapshotEventDto on
-        // the Rust side; a bare game view leaves the board unmounted.
-        sendTagged(viewer, "state", "state", "{\"checkpointId\":" + (++checkpoint)
+        sendTagged(viewer, "state", "state", stateFrame(view));
+    }
+
+    @Override
+    public void publishState() {
+        final int seats = Math.max(1, seatCount());
+        for (int viewer = 0; viewer < seats; viewer++) {
+            if (!botSeats.contains(viewer)) {
+                post("game:seat_state", "{\"seat\":" + viewer + ",\"state\":"
+                        + stateFrame(snapshots.apply(viewer)) + "}");
+            }
+        }
+    }
+
+    // The client reads state.gameView, matching GameSnapshotEventDto on
+    // the Rust side; a bare game view leaves the board unmounted.
+    private String stateFrame(final String view) {
+        return "{\"checkpointId\":" + (++checkpoint)
                 + ",\"label\":\"forge\",\"gameView\":" + view
-                + ",\"timestampMs\":" + System.currentTimeMillis() + "}");
+                + ",\"timestampMs\":" + System.currentTimeMillis() + "}";
     }
 
     public void publishGameOver(final String engineError) {
@@ -329,9 +344,7 @@ public final class SabTransport implements InteractiveBridge {
             }
             final String view = snapshots == null ? null : snapshots.apply(seat);
             if (view != null && !view.isEmpty()) {
-                sendTagged(seat, "state", "state", "{\"checkpointId\":" + (++checkpoint)
-                        + ",\"label\":\"forge\",\"gameView\":" + view
-                        + ",\"timestampMs\":" + System.currentTimeMillis() + "}");
+                sendTagged(seat, "state", "state", stateFrame(view));
             }
             sendTagged(seat, "prompt", "prompt", "{\"promptId\":" + (++finalPromptId)
                     + ",\"decidingPlayerId\":\"player-" + seat

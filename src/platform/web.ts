@@ -320,6 +320,18 @@ class WorkerBridge {
       },
     );
 
+    eventBus.on<{ seat: number; state: unknown }>("game:seat_state", ({ seat, state }) => {
+      if (!this.directiveLanes) return;
+      if (seat === this.directiveLanes.localSeat) {
+        this.applyEngineMessage({ kind: "state", state });
+      } else {
+        this.eventBus.emit("game:relay_message", {
+          forPlayer: `player-${seat}`,
+          msg: { kind: "state", state },
+        });
+      }
+    });
+
     // The engine has nothing more to say once the game is over, so the bots
     // parked on their seats can go.
     eventBus.on("game:over", () => this.stopLocalBots());

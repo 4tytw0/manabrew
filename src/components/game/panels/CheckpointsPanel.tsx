@@ -1,13 +1,12 @@
 import { cn } from "@/lib/utils";
 import type { CheckpointDto } from "@/protocol/game";
-import { PHASES } from "../game.constants";
+import { stepLabel } from "../game.utils";
 interface CheckpointsPanelProps {
   checkpoints: CheckpointDto[];
   canRequestRestore: boolean;
   onRequestRestore: (checkpoint: CheckpointDto) => void;
   resolvePlayerName: (playerId: string) => string;
 }
-const STEP_LABELS = new Map(PHASES.map((phase) => [phase.id, phase.label]));
 function groupByTurn(checkpoints: CheckpointDto[]): [number, CheckpointDto[]][] {
   const turns = new Map<number, CheckpointDto[]>();
   for (const checkpoint of checkpoints) {
@@ -49,7 +48,7 @@ export function CheckpointsPanel({
                       disabled={!canRequestRestore}
                       onClick={() => onRequestRestore(checkpoint)}
                     >
-                      {STEP_LABELS.get(checkpoint.step) ?? checkpoint.step}
+                      {stepLabel(checkpoint.step)}
                     </button>
                   </li>
                 ))}

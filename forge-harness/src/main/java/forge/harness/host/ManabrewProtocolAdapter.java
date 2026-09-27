@@ -211,6 +211,11 @@ final class ManabrewProtocolAdapter {
                 flat.addProperty("kind", "request_restore");
                 flat.addProperty("checkpointId", directive.get("checkpointId").getAsInt());
                 break;
+            case "restoreVote":
+                flat.addProperty("kind", "restore_vote");
+                flat.addProperty("voteId", directive.get("voteId").getAsInt());
+                flat.addProperty("accept", directive.get("accept").getAsBoolean());
+                break;
             default:
                 throw new UnsupportedOperationException("unsupported directive: " + kind);
         }

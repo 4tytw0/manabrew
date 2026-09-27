@@ -161,6 +161,10 @@ public final class ManaBrewEngineAdapter {
         return String.valueOf(getSession(sessionId).isGameOver());
     }
 
+    public String getStateRevision(final String sessionId) {
+        return String.valueOf(getSession(sessionId).getStateRevision());
+    }
+
     public String getEngineError(final String sessionId) {
         final String error = getSession(sessionId).getEngineError();
         return error == null ? "" : error;

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "./Modal";
 import { Button } from "@/components/ui/button";
 import type { CheckpointDto, RestoreVoteDto } from "@/protocol/game";
-import { PHASES } from "../game.constants";
+import { checkpointLabel } from "../game.utils";
 interface RestoreRequestModalProps {
   checkpoint: CheckpointDto;
   localPlayerId: string;
@@ -24,9 +24,7 @@ export function RestoreRequestModal({
   const [sentAfterVoteId, setSentAfterVoteId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sent = sentAfterVoteId !== null;
-  const target = `turn ${checkpoint.turn}, ${
-    PHASES.find((phase) => phase.id === checkpoint.step)?.label ?? checkpoint.step
-  }`;
+  const target = checkpointLabel(checkpoint);
   const vote = sent && restoreVote && restoreVote.voteId > sentAfterVoteId ? restoreVote : null;
   const ownVote = vote?.requestedByPlayerId === localPlayerId;
   const status = ownVote ? vote.status : null;
@@ -39,6 +37,13 @@ export function RestoreRequestModal({
         : status?.type === "unavailable"
           ? `The snapshot for ${target} is no longer available.`
           : null;
+  const awaiting = ownVote ? vote.awaitingPlayerIds.map(resolvePlayerName) : [];
+  const waiting =
+    awaiting.length > 0
+      ? `Waiting for ${awaiting.join(", ")}…`
+      : multiplayer && !ownVote
+        ? `Waiting for the other players…`
+        : `Restoring…`;
   useEffect(() => {
     if (status?.type === "approved") onClose();
   }, [status?.type, onClose]);
@@ -62,7 +67,7 @@ export function RestoreRequestModal({
           <p role="status">{outcome}</p>
         ) : sent ? (
           <p role="status" className="text-muted-foreground">
-            {multiplayer ? `Waiting for the other players…` : `Restoring…`}
+            {waiting}
           </p>
         ) : (
           <p>

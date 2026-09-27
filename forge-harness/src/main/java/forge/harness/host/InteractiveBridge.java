@@ -22,4 +22,6 @@ public interface InteractiveBridge {
     default String exchange(int playerIndex, String promptJson) {
         return exchange(promptJson);
     }
+
+    void publishState();
 }

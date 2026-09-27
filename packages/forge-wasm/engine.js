@@ -56,6 +56,13 @@ export class ForgeEngine {
           this.directiveLanes = createDirectiveLanes(message.payload.buffers);
           this.localSeatIndex = message.payload.localSeat;
         }
+        if (message.event === "game:seat_state") {
+          const { seat, state } = message.payload;
+          this.dispatchMessage(
+            { kind: "state", state },
+            seat === this.localSeatIndex ? LOCAL_SEAT : `player-${seat}`,
+          );
+        }
         this.options.onEvent?.(message.event, message.payload);
       });
     });

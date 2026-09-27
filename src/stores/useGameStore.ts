@@ -734,6 +734,14 @@ export const useGameStore = create<GameState>()(
           directive: { type: "requestRestore", checkpointId },
         });
       },
+      voteRestore: async (voteId, accept) => {
+        const { myPlayerSlot } = get();
+        if (!myPlayerSlot) throw new Error("No local player is available to vote.");
+        await getSelectedGameRuntime().api.sendDirective({
+          playerSlot: myPlayerSlot,
+          directive: { type: "restoreVote", voteId, accept },
+        });
+      },
     }),
     { name: "game", enabled: import.meta.env.DEV },
   ),

@@ -26,6 +26,7 @@ import { MiddleBarDock, RightActionPanel } from "@/components/game/panels";
 import {
   ConcedeGameModal,
   RestoreRequestModal,
+  RestoreVoteModal,
   EliminatedModal,
   GameSettingsModal,
   LeaveGameModal,
@@ -277,12 +278,13 @@ export default function Game({ exitTo }: GameProps = {}) {
   const hostingForgeRoom = useServerStore((s) => s.hostingForgeRoom);
   const selectedRuntime = getSelectedGameRuntime();
   const manualApi = isManualTabletopApi(selectedRuntime) ? selectedRuntime.api : null;
-  const { respond, concede, endGame, requestRestore, gameDecks } = useGameStore(
+  const { respond, concede, endGame, requestRestore, voteRestore, gameDecks } = useGameStore(
     useShallow((s) => ({
       respond: s.respond,
       concede: s.concede,
       endGame: s.endGame,
       requestRestore: s.requestRestore,
+      voteRestore: s.voteRestore,
       gameDecks: s.gameDecks,
     })),
   );
@@ -2245,6 +2247,12 @@ export default function Game({ exitTo }: GameProps = {}) {
     onHideModal: hidePromptModal,
     onShowModal: showPromptModal,
   };
+  const openRestoreVote =
+    gameView.restoreVote?.status.type === "pending" &&
+    myPlayerSlot &&
+    gameView.restoreVote.awaitingPlayerIds.includes(myPlayerSlot)
+      ? gameView.restoreVote
+      : null;
 
   return (
     <div
@@ -2512,6 +2520,14 @@ export default function Game({ exitTo }: GameProps = {}) {
           endsWithConcede={leaveEndsWithConcede}
           onStay={handleStay}
           onLeave={leaveEndsWithConcede ? handleLeaveConcede : handleLeaveConfirm}
+        />
+      )}
+      {openRestoreVote && (
+        <RestoreVoteModal
+          key={openRestoreVote.voteId}
+          restoreVote={openRestoreVote}
+          resolvePlayerName={(playerId) => playerNameById.get(playerId) ?? playerId}
+          onVote={(accept) => voteRestore(openRestoreVote.voteId, accept)}
         />
       )}
       {restoreTarget && myPlayerSlot && (

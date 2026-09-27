@@ -157,8 +157,9 @@ pub struct GameViewDto {
 #[ts(export, export_to = "game/index.ts")]
 pub struct RestoreVoteDto {
     pub vote_id: u32,
-    pub checkpoint_id: u32,
+    pub checkpoint: CheckpointDto,
     pub requested_by_player_id: String,
+    pub awaiting_player_ids: Vec<String>,
     pub status: RestoreVoteStatus,
 }
 

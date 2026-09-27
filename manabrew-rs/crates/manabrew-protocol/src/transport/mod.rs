@@ -31,6 +31,7 @@ pub struct StateUpdate {
 pub enum DirectiveInput {
     Concede,
     RequestRestore { checkpoint_id: u32 },
+    RestoreVote { vote_id: u32, accept: bool },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

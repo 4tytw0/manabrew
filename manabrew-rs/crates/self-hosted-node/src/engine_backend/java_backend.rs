@@ -527,6 +527,14 @@ impl JavaEngineHandle {
         guard.is_game_over(session_id)
     }
 
+    pub fn state_revision(&self, session_id: &str) -> Result<u64, String> {
+        let bridge = self.bridge_for(session_id)?;
+        let mut guard = bridge
+            .lock()
+            .map_err(|_| "java subprocess mutex poisoned".to_string())?;
+        guard.state_revision(session_id)
+    }
+
     pub fn get_snapshot(&self, session_id: &str, viewer: Option<usize>) -> Result<String, String> {
         let bridge = self.bridge_for(session_id)?;
         let mut guard = bridge
@@ -700,6 +708,10 @@ mod graal_ffi {
             viewer: c_int,
         ) -> *mut c_char;
         pub fn forge_get_game_over(
+            thread: *mut graal_isolatethread_t,
+            session_id: *const c_char,
+        ) -> *mut c_char;
+        pub fn forge_get_state_revision(
             thread: *mut graal_isolatethread_t,
             session_id: *const c_char,
         ) -> *mut c_char;
@@ -973,6 +985,14 @@ impl GraalEngineHandle {
             graal_ffi::forge_get_game_over(self.bridge.thread, session.as_ptr())
         })?;
         Ok(value.trim() == "true")
+    }
+
+    fn state_revision(&self, session_id: &str) -> Result<u64, String> {
+        let session = cstring(session_id)?;
+        let value = self.bridge.decode(unsafe {
+            graal_ffi::forge_get_state_revision(self.bridge.thread, session.as_ptr())
+        })?;
+        parse_state_revision(&value)
     }
 
     fn get_snapshot(&self, session_id: &str, viewer: Option<usize>) -> Result<String, String> {
@@ -1550,6 +1570,7 @@ fn run_hosted_engine_game_inner(
     // The last time an answer went in or a prompt came out. The loop polls
     // hot for a moment after either, which is when the next is due.
     let mut last_activity = Instant::now();
+    let mut state_revision = 0;
 
     loop {
         if cancel.load(std::sync::atomic::Ordering::Relaxed) {
@@ -1672,6 +1693,19 @@ fn run_hosted_engine_game_inner(
                     }
                 }
             }
+        }
+
+        let revision = engine.state_revision(&session_id)?;
+        if revision != state_revision {
+            state_revision = revision;
+            for &agent_index in remote_response_rxs.keys() {
+                let state =
+                    AgentMessage::State(state_via_handle(&engine, &session_id, Some(agent_index))?);
+                if remote_prompt_tx.send((agent_index, state)).is_err() {
+                    return Ok(());
+                }
+            }
+            send_observer_state(&engine, &session_id, &remote_prompt_tx);
         }
 
         if let Some(prompt_json) = engine.get_prompt(&session_id, 0)? {
@@ -2138,6 +2172,14 @@ pub fn run_concede_smoke() -> Result<(), String> {
 }
 
 #[cfg(forge_backend)]
+fn parse_state_revision(value: &str) -> Result<u64, String> {
+    value
+        .trim()
+        .parse()
+        .map_err(|err| format!("invalid java state revision {value:?}: {err}"))
+}
+
+#[cfg(forge_backend)]
 fn directive_json(player: usize, directive: DirectiveInput) -> String {
     serde_json::json!({ "type": "directive", "directive": directive, "player": player }).to_string()
 }
@@ -2505,6 +2547,7 @@ pub trait JavaBridge {
     ) -> Result<Option<String>, String>;
     fn get_snapshot(&mut self, session_id: &str, viewer: Option<usize>) -> Result<String, String>;
     fn is_game_over(&mut self, session_id: &str) -> Result<bool, String>;
+    fn state_revision(&mut self, session_id: &str) -> Result<u64, String>;
     fn end_game(&mut self, session_id: &str) -> Result<(), String>;
     fn abort_game(&mut self, session_id: &str) -> Result<(), String>;
 }
@@ -2601,6 +2644,10 @@ impl JavaBridge for UnavailableJavaBridge {
     }
 
     fn is_game_over(&mut self, _session_id: &str) -> Result<bool, String> {
+        Err(unsupported_message().to_string())
+    }
+
+    fn state_revision(&mut self, _session_id: &str) -> Result<u64, String> {
         Err(unsupported_message().to_string())
     }
 
@@ -2862,6 +2909,11 @@ impl JavaBridge for SubprocessBridge {
         let body = json!({ "command": "getGameOver", "sessionId": session_id });
         let value = self.call(&body.to_string())?;
         Ok(value.trim() == "true")
+    }
+
+    fn state_revision(&mut self, session_id: &str) -> Result<u64, String> {
+        let body = json!({ "command": "getStateRevision", "sessionId": session_id });
+        parse_state_revision(&self.call(&body.to_string())?)
     }
 
     fn end_game(&mut self, session_id: &str) -> Result<(), String> {

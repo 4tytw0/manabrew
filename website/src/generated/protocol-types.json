@@ -368,8 +368,8 @@
       "refs": ["DiceRollEntry", "PromptPresentation"]
     },
     "DirectiveInput": {
-      "ts": "type DirectiveInput =\n  | { type: \"concede\" }\n  | { type: \"requestRestore\"; checkpointId: number };",
-      "rust": "#[serde(\n    tag = \"type\",\n    rename_all = \"camelCase\",\n    rename_all_fields = \"camelCase\"\n)]\npub enum DirectiveInput {\n    Concede,\n    RequestRestore { checkpoint_id: u32 },\n}",
+      "ts": "type DirectiveInput =\n  | { type: \"concede\" }\n  | { type: \"requestRestore\"; checkpointId: number }\n  | { type: \"restoreVote\"; voteId: number; accept: boolean };",
+      "rust": "#[serde(\n    tag = \"type\",\n    rename_all = \"camelCase\",\n    rename_all_fields = \"camelCase\"\n)]\npub enum DirectiveInput {\n    Concede,\n    RequestRestore { checkpoint_id: u32 },\n    RestoreVote { vote_id: u32, accept: bool },\n}",
       "refs": []
     },
     "DungeonStateDto": {
@@ -487,9 +487,9 @@
       "refs": ["CardDto"]
     },
     "RestoreVoteDto": {
-      "ts": "interface RestoreVoteDto {\n  voteId: number;\n  checkpointId: number;\n  requestedByPlayerId: string;\n  status: RestoreVoteStatus;\n}",
-      "rust": "#[serde(rename_all = \"camelCase\")]\npub struct RestoreVoteDto {\n    pub vote_id: u32,\n    pub checkpoint_id: u32,\n    pub requested_by_player_id: String,\n    pub status: RestoreVoteStatus,\n}",
-      "refs": ["RestoreVoteStatus"]
+      "ts": "interface RestoreVoteDto {\n  voteId: number;\n  checkpoint: CheckpointDto;\n  requestedByPlayerId: string;\n  awaitingPlayerIds: Array<string>;\n  status: RestoreVoteStatus;\n}",
+      "rust": "#[serde(rename_all = \"camelCase\")]\npub struct RestoreVoteDto {\n    pub vote_id: u32,\n    pub checkpoint: CheckpointDto,\n    pub requested_by_player_id: String,\n    pub awaiting_player_ids: Vec<String>,\n    pub status: RestoreVoteStatus,\n}",
+      "refs": ["CheckpointDto", "RestoreVoteStatus"]
     },
     "RestoreVoteStatus": {
       "ts": "type RestoreVoteStatus =\n  | { type: \"pending\" }\n  | { type: \"approved\" }\n  | { type: \"declined\"; playerId: string }\n  | { type: \"unavailable\" };",

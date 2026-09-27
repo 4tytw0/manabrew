@@ -130,4 +130,5 @@ export interface GameState {
     myPlayerSlot: string | null,
   ) => void;
   requestRestore: (checkpointId: number) => Promise<void>;
+  voteRestore: (voteId: number, accept: boolean) => Promise<void>;
 }
