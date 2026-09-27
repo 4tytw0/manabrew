@@ -19,6 +19,12 @@
 * **ui:** match rules-preview view controls to printed previews
 * **ui:** remove synthesized game sounds, sound settings, and unused volume preferences
 
+## [3.50.2](https://github.com/witchesofthehill/manabrew/compare/v3.50.1...v3.50.2) (2026-09-27)
+
+### Fixes
+
+* repair post-battlefield gameplay regressions ([#994](https://github.com/witchesofthehill/manabrew/issues/994)) ([68c3b87](https://github.com/witchesofthehill/manabrew/commit/68c3b8741a8b61fcc5bc91a387c5c4026c97dfed))
+
 ## [3.50.1](https://github.com/witchesofthehill/manabrew/compare/v3.50.0...v3.50.1) (2026-09-26)
 
 ### Fixes
