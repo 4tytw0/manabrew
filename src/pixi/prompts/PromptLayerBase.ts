@@ -582,6 +582,7 @@ export abstract class PromptLayerBase {
   protected promptCardPointerId: number | null = null;
   protected selectionFilter = "";
   protected selectionFilterFocused = false;
+  protected mobileCardSearchInput: HTMLInputElement | null = null;
   protected selectionFilterBlinkAt = 0;
   protected selectionFilterView: {
     container: Container;
@@ -1330,9 +1331,12 @@ export abstract class PromptLayerBase {
   protected setSelectionFilterFocused(focused: boolean): void {
     this.selectionFilterFocused = focused;
     if (
-      this.spec?.currentPrompt?.input.type === "chooseCards" &&
-      this.layerPresentation.modalBodyFit === "scroll"
-    ) {
+      !focused &&
+      this.mobileCardSearchInput &&
+      document.activeElement === this.mobileCardSearchInput
+    )
+      this.mobileCardSearchInput.blur();
+    if (this.spec?.currentPrompt?.input.type === "chooseCards") {
       setVirtualTextInputActive(this, focused);
     }
     this.selectionFilterBlinkAt = performance.now();

@@ -952,6 +952,37 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     background.tabIndex = 0;
     background.on("focusin", () => this.setSelectionFilterFocused(true));
     background.on("focusout", () => this.setSelectionFilterFocused(false));
+    if (compact && this.spec?.currentPrompt?.input.type === "chooseCards") {
+      if (!this.mobileCardSearchInput) {
+        const input = document.createElement("input");
+        input.type = "search";
+        input.setAttribute("aria-label", placeholder);
+        input.autocomplete = "off";
+        input.autocapitalize = "off";
+        input.spellcheck = false;
+        input.style.cssText =
+          "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;font-size:16px";
+        input.addEventListener("input", () => {
+          this.selectionFilter = input.value;
+          this.selectionFilterFocused = true;
+          this.modalScrollOffset = 0;
+          this.modalScrollTarget = 0;
+          this.rebuild();
+        });
+        input.addEventListener("blur", () => this.setSelectionFilterFocused(false));
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            input.blur();
+          }
+        });
+        document.body.append(input);
+        this.mobileCardSearchInput = input;
+      }
+      if (this.mobileCardSearchInput.value !== this.selectionFilter)
+        this.mobileCardSearchInput.value = this.selectionFilter;
+      background.on("pointerdown", () => this.mobileCardSearchInput?.focus());
+    }
     const searchIcon = this.makeIcon(
       "lucide-search",
       15,
@@ -1015,8 +1046,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     max: number,
     reveal: boolean,
   ): void {
-    const showFilter =
-      !reveal && cards.length > 1 && this.layerPresentation.modalBodyFit === "scroll";
+    const showFilter = !reveal && cards.length > 1;
     const normalizedFilter = this.selectionFilter.toLocaleLowerCase();
     const visibleIndices = showFilter
       ? cards.reduce<number[]>((indices, card, index) => {
@@ -1053,24 +1083,24 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     const cardWidth = Math.max(0, ...cardSizes.map((size) => size.width));
     const cardHeight = Math.max(0, ...cardSizes.map((size) => size.height));
     const columns = horizontalScroll
-      ? Math.max(1, cards.length)
+      ? Math.max(1, visibleCount)
       : Math.max(
           1,
           Math.min(
-            cards.length,
+            visibleCount,
             Math.floor((cardAreaWidth + PROMPT_CARD_GAP) / (cardWidth + PROMPT_CARD_GAP)),
           ),
         );
-    const rows = horizontalScroll ? Math.min(1, cards.length) : Math.ceil(visibleCount / columns);
+    const rows = horizontalScroll ? Math.min(1, visibleCount) : Math.ceil(visibleCount / columns);
     const compactScrollRow = horizontalScroll;
     const compactCardSpacing =
-      cards.length <= 1
+      visibleCount <= 1
         ? 0
         : compactScrollRow
           ? cardWidth + PROMPT_CARD_GAP
           : Math.min(
               cardWidth + PROMPT_CARD_GAP,
-              Math.max(0, (cardAreaWidth - cardWidth) / (cards.length - 1)),
+              Math.max(0, (cardAreaWidth - cardWidth) / (visibleCount - 1)),
             );
     const height = Math.min(
       this.viewportHeight - 24,
@@ -1100,7 +1130,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
         state.bodyTop,
         visibleCount,
         "Search cards by name",
-        false,
+        horizontalScroll,
         PANEL_PADDING,
       );
       state.bodyTop += 52;
@@ -1119,7 +1149,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       body.addChild(empty);
     }
     const compactScrollRowWidth =
-      cards.length > 0 ? (cards.length - 1) * compactCardSpacing + cardWidth : 0;
+      visibleCount > 0 ? (visibleCount - 1) * compactCardSpacing + cardWidth : 0;
     const compactScrollOverflow = compactScrollRow && compactScrollRowWidth > cardAreaWidth;
     const cardRow = compactScrollOverflow ? new Container() : null;
     if (cardRow) {

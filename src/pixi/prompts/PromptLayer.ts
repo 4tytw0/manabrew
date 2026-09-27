@@ -200,6 +200,9 @@ export class PromptLayer extends PromptModalLayer {
   }
 
   destroy(): void {
+    this.mobileCardSearchInput?.blur();
+    this.mobileCardSearchInput?.remove();
+    this.mobileCardSearchInput = null;
     setVirtualTextInputActive(this, false);
     window.removeEventListener("keydown", this.keyListener);
     window.removeEventListener("keydown", this.onModifierEvent);
@@ -239,6 +242,8 @@ export class PromptLayer extends PromptModalLayer {
     this.activePromptCardId = null;
     this.selectedIds.clear();
     this.counts.clear();
+    this.mobileCardSearchInput?.blur();
+    if (this.mobileCardSearchInput) this.mobileCardSearchInput.value = "";
     this.selectionFilter = "";
     this.selectionFilterFocused = false;
     this.numberInputFocused = false;
@@ -309,6 +314,13 @@ export class PromptLayer extends PromptModalLayer {
     this.actionGlow = null;
     this.actionPulseNodes = [];
     this.modalOpen = false;
+    if (
+      this.mobileCardSearchInput &&
+      (this.spec?.currentPrompt?.input.type !== "chooseCards" ||
+        this.spec?.modalHidden ||
+        this.spec?.action.isWaitingForResponse)
+    )
+      this.mobileCardSearchInput.blur();
     setVirtualTextInputActive(this, false);
     this.modalBody = null;
     this.container.removeChildren().forEach((child) => child.destroy({ children: true }));
@@ -334,10 +346,7 @@ export class PromptLayer extends PromptModalLayer {
       setVirtualTextInputActive(
         this,
         (input.type === "chooseFromSelection" && input.options.length > 5) ||
-          (input.type === "chooseCards" &&
-            input.cards.length > 1 &&
-            this.layerPresentation.modalBodyFit === "scroll" &&
-            this.selectionFilterFocused),
+          (input.type === "chooseCards" && input.cards.length > 1 && this.selectionFilterFocused),
       );
       this.modalOpen = true;
       this.renderModal();
@@ -2164,6 +2173,7 @@ export class PromptLayer extends PromptModalLayer {
     if ((modal && !modal.contains(this.app.canvas)) || event.defaultPrevented || event.isComposing)
       return;
     if (!this.spec || !this.modalOpen) return;
+    if (event.target === this.mobileCardSearchInput) return;
     const primaryActionKey = event.key === "Enter" || event.code === "Space";
     if (
       !this.selectionFilterFocused &&
@@ -2177,10 +2187,7 @@ export class PromptLayer extends PromptModalLayer {
       return;
     }
     const input = this.spec.currentPrompt?.input;
-    const searchingCards =
-      input?.type === "chooseCards" &&
-      input.cards.length > 1 &&
-      this.layerPresentation.modalBodyFit === "scroll";
+    const searchingCards = input?.type === "chooseCards" && input.cards.length > 1;
     if (
       ((input?.type === "chooseFromSelection" && input.options.length > 5) ||
         (searchingCards && this.selectionFilterFocused)) &&
