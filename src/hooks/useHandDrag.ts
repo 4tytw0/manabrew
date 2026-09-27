@@ -3,7 +3,6 @@ import type { CardDto } from "@/protocol/game";
 import { LONG_PRESS_CANCEL_DIST_SQ } from "@/lib/responsive";
 import { LongPressTimer } from "@/lib/longPress";
 import { haptic } from "@/lib/haptics";
-import { playGameAudioCue } from "@/lib/gameAudio";
 
 export interface HandDragStart {
   clientX: number;
@@ -149,15 +148,12 @@ export function useHandDrag({
         const { overBattlefield, overHand } = classifyPosition(event.clientX, event.clientY);
         if (overBattlefield) {
           haptic("confirm");
-          playGameAudioCue("confirm");
           onBattlefieldDrop?.(card, { clientX: event.clientX, clientY: event.clientY });
           onCastSpell(card.id);
         } else if (overHand) {
           haptic("confirm");
-          playGameAudioCue("confirm");
         } else if (intent.canCast) {
           haptic("warn");
-          playGameAudioCue("reject");
           setRejectionFeedback({
             x: event.clientX,
             y: event.clientY,

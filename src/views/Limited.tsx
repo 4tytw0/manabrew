@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Boxes, Crown, Dice5, Hourglass, Layers, Shuffle, Swords, Wand2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import { Input } from "@/components/ui/input";
 import { SetPicker } from "@/components/limited/SetPicker";
 import { DRAFTABLE_SET_TYPES } from "@/components/limited/setFilters";
@@ -604,18 +605,19 @@ function SelectedSetSummary({
             Booster variant
           </div>
           {info && info.variants.length > 0 ? (
-            <select
+            <AppSelect
               value={selectedVariant}
-              onChange={(e) => onVariantChange(e.target.value)}
+              onValueChange={onVariantChange}
+              aria-label="Booster variant"
               className="w-full rounded border border-border/70 bg-background px-2 py-1 text-xs pointer-coarse:text-base"
             >
-              <option value="">Default</option>
+              <AppSelectOption value="">Default</AppSelectOption>
               {info.variants.map((v) => (
-                <option key={v} value={v}>
+                <AppSelectOption key={v} value={v}>
                   {v}
-                </option>
+                </AppSelectOption>
               ))}
-            </select>
+            </AppSelect>
           ) : (
             <div className="text-xs text-muted-foreground">Single recipe</div>
           )}

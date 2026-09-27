@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import { Input } from "@/components/ui/input";
 import { SetTile } from "@/components/limited/SetTile";
 import { SET_TYPE_LABELS } from "@/components/limited/setFilters";
@@ -102,9 +103,9 @@ export function SetPicker({
         </div>
 
         {isTouch ? (
-          <select
+          <AppSelect
             value={typeFilter}
-            onChange={(event) => setTypeFilter(event.target.value)}
+            onValueChange={setTypeFilter}
             aria-label="Set type"
             className="h-11 w-full rounded-md border border-input bg-background px-3 text-base"
           >
@@ -112,12 +113,12 @@ export function SetPicker({
               const count = counts[key] ?? 0;
               if (key !== "all" && count === 0) return null;
               return (
-                <option key={key} value={key}>
+                <AppSelectOption key={key} value={key}>
                   {label} ({count})
-                </option>
+                </AppSelectOption>
               );
             })}
-          </select>
+          </AppSelect>
         ) : (
           <div className="flex flex-wrap gap-1">
             {SET_TYPE_LABELS.map(({ key, label }) => {

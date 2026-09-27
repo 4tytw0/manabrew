@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,19 +142,19 @@ export function DeckListControls({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <select
+        <AppSelect
           value={sortBy}
           aria-label="Sort decks"
-          onChange={(event) => onSortChange(event.target.value as SortBy)}
+          onValueChange={(value) => onSortChange(value as SortBy)}
           title="Sort order"
           className={SELECT_CLS}
         >
           {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
+            <AppSelectOption key={option.value} value={option.value}>
               {option.label}
-            </option>
+            </AppSelectOption>
           ))}
-        </select>
+        </AppSelect>
 
         {isTouch ? (
           <DropdownMenu>

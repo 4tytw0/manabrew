@@ -39,6 +39,7 @@ import {
 } from "@/themes/themeMetadata";
 import { getDefaultGameThemeColorMap } from "@/hooks/useTheme";
 import { Input } from "@/components/ui/input";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import { Label } from "@/components/ui/label";
 import { Button as BaseButton, type ButtonProps } from "@/components/ui/button";
 import {
@@ -269,18 +270,18 @@ export default function Settings() {
             <Label htmlFor="settings-section" className="sr-only">
               Settings section
             </Label>
-            <select
+            <AppSelect
               id="settings-section"
               value={activeTab}
-              onChange={(event) => setActiveTab(event.target.value as SettingsTab)}
+              onValueChange={(value) => setActiveTab(value as SettingsTab)}
               className="h-11 w-full rounded-md border border-input bg-background px-3 text-base"
             >
               {settingsTabs.map((tab) => (
-                <option key={tab.value} value={tab.value}>
+                <AppSelectOption key={tab.value} value={tab.value}>
                   {tab.label}
-                </option>
+                </AppSelectOption>
               ))}
-            </select>
+            </AppSelect>
           </div>
         ) : (
           <div className="flex items-center gap-6 overflow-x-auto border-b no-scrollbar touch-scroll-fade">
@@ -561,16 +562,16 @@ export default function Settings() {
                     >
                       {slot}
                     </Label>
-                    <select
+                    <AppSelect
                       id={`zone-order-${index}`}
                       value={zoneOrder[index]}
-                      onChange={(e) => setZoneSlot(index, e.target.value as ZonePanelItem)}
+                      onValueChange={(value) => setZoneSlot(index, value as ZonePanelItem)}
                       className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-11 pointer-coarse:text-base"
                     >
-                      <option value="library">Library</option>
-                      <option value="graveyard">Graveyard</option>
-                      <option value="exile">Exile</option>
-                    </select>
+                      <AppSelectOption value="library">Library</AppSelectOption>
+                      <AppSelectOption value="graveyard">Graveyard</AppSelectOption>
+                      <AppSelectOption value="exile">Exile</AppSelectOption>
+                    </AppSelect>
                   </div>
                 ))}
               </div>

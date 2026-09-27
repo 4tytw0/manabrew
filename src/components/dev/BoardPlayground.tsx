@@ -19,6 +19,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useKeybindings } from "@/hooks/useKeybindings";
 import { HoverCardPreview } from "@/components/game/HoverCardPreview";
 import { Button } from "@/components/ui/button";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { PlayerSheetModal } from "@/components/game/panels/PlayerSheetModal";
@@ -490,18 +491,18 @@ export function BoardPlayground({ themeEditor = false }: { themeEditor?: boolean
               <label className="text-sm font-medium" htmlFor="preview-scenario">
                 Preview scenario
               </label>
-              <select
+              <AppSelect
                 id="preview-scenario"
                 className="h-9 max-w-full rounded-md border border-input bg-background px-2 text-sm"
                 value={scenarioIndex}
-                onChange={(event) => void openPreviewScenario(Number(event.target.value))}
+                onValueChange={(value) => void openPreviewScenario(Number(value))}
               >
                 {PREVIEW_SCENARIOS.map((scenario, index) => (
-                  <option key={scenario.label} value={index}>
+                  <AppSelectOption key={scenario.label} value={index}>
                     {scenario.label}
-                  </option>
+                  </AppSelectOption>
                 ))}
-              </select>
+              </AppSelect>
               <Button
                 size="sm"
                 variant="outline"
@@ -557,33 +558,33 @@ export function BoardPlayground({ themeEditor = false }: { themeEditor?: boolean
               </Button>
               <label className="flex items-center gap-2 text-sm">
                 Test actions
-                <select
+                <AppSelect
                   aria-label="Test action count"
                   className="h-9 rounded-md border border-input bg-background px-2"
                   value={actionCount}
-                  onChange={(event) => setActionCount(Number(event.target.value))}
+                  onValueChange={(value) => setActionCount(Number(value))}
                 >
                   {[0, 2, 9].map((count) => (
-                    <option key={count} value={count}>
+                    <AppSelectOption key={count} value={count}>
                       {count}
-                    </option>
+                    </AppSelectOption>
                   ))}
-                </select>
+                </AppSelect>
               </label>
               <label className="flex items-center gap-2 text-sm">
                 Viewport
-                <select
+                <AppSelect
                   aria-label="Preview viewport"
                   className="h-9 rounded-md border border-input bg-background px-2"
                   value={viewportIndex}
-                  onChange={(event) => setViewportIndex(Number(event.target.value))}
+                  onValueChange={(value) => setViewportIndex(Number(value))}
                 >
                   {PREVIEW_VIEWPORTS.map((size, index) => (
-                    <option key={size.label} value={index}>
+                    <AppSelectOption key={size.label} value={index}>
                       {size.label}
-                    </option>
+                    </AppSelectOption>
                   ))}
-                </select>
+                </AppSelect>
               </label>
             </form>
             <p className="text-xs text-muted-foreground">

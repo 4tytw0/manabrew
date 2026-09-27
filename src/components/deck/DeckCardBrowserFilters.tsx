@@ -1,5 +1,6 @@
 import { Grid3X3, Layers3, List, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import {
   Sheet,
   SheetClose,
@@ -230,46 +231,46 @@ export function DeckCardBrowserFilters({
     </div>
   );
   const groupControl = (
-    <select
+    <AppSelect
       value={groupBy}
       aria-label={`Group cards by`}
       className="h-9 rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-10 pointer-coarse:text-base"
-      onChange={(event) => onGroupByChange(event.target.value as GroupByMode)}
+      onValueChange={(value) => onGroupByChange(value as GroupByMode)}
     >
       {GROUP_BY_OPTIONS.filter((option) => option.value !== "custom").map((option) => (
-        <option key={option.value} value={option.value}>
+        <AppSelectOption key={option.value} value={option.value}>
           Group: {option.label}
-        </option>
+        </AppSelectOption>
       ))}
-    </select>
+    </AppSelect>
   );
   const typeControl = (
-    <select
+    <AppSelect
       value={cardType}
       aria-label={`Filter by card type`}
       className="h-9 rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-10 pointer-coarse:text-base"
-      onChange={(event) => onCardTypeChange(event.target.value as BrowserCardTypeFilter)}
+      onValueChange={(value) => onCardTypeChange(value as BrowserCardTypeFilter)}
     >
       {CARD_TYPE_OPTIONS.map((option) => (
-        <option key={option.value} value={option.value}>
+        <AppSelectOption key={option.value} value={option.value}>
           {option.label}
-        </option>
+        </AppSelectOption>
       ))}
-    </select>
+    </AppSelect>
   );
   const manaControl = (
-    <select
+    <AppSelect
       value={manaValue}
       aria-label={`Filter by mana value`}
       className="h-9 rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-10 pointer-coarse:text-base"
-      onChange={(event) => onManaValueChange(event.target.value as BrowserManaValueFilter)}
+      onValueChange={(value) => onManaValueChange(value as BrowserManaValueFilter)}
     >
       {MANA_VALUE_OPTIONS.map((value) => (
-        <option key={value} value={value}>
+        <AppSelectOption key={value} value={value}>
           {value === "all" ? `Any mana value` : `Mana value: ${value}`}
-        </option>
+        </AppSelectOption>
       ))}
-    </select>
+    </AppSelect>
   );
   return (
     <>

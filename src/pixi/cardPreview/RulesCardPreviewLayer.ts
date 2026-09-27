@@ -12,6 +12,7 @@ import type { CardDto } from "@/protocol/game";
 import type { ScryfallCard } from "@/types/scryfall";
 import { resolveCardFaces } from "@/lib/cardFaces";
 import type { PreviewPhase } from "@/lib/cardPreview";
+import { isCoarsePointer } from "@/lib/responsive";
 import type { HandActionOption } from "@/stores/useGameUIStore";
 import type { Theme } from "@/hooks/useTheme";
 import {
@@ -110,6 +111,8 @@ const PORTRAIT_HEIGHT: number = RULES_CARD_CONSTRAINTS.height;
 const LANDSCAPE_WIDTH = PORTRAIT_HEIGHT;
 const LANDSCAPE_HEIGHT = PORTRAIT_WIDTH;
 const MAX_PREVIEW_SCALE = GAME_CARD_SIZES.preview.width / PORTRAIT_WIDTH;
+const PREVIEW_CONTROL_SIZE = 32;
+const TOUCH_PREVIEW_CONTROL_SIZE = 44;
 const PORTRAIT_HEADER_HEIGHT = 52;
 const LANDSCAPE_HEADER_HEIGHT = 48;
 const PORTRAIT_ART_HEIGHT = 184;
@@ -235,7 +238,10 @@ export class RulesCardPreviewLayer {
     this.theme = theme;
     this.frame = resolveRulesPreviewFrame(theme);
     this.callbacks = callbacks;
-    this.viewControls = new HandCardControls(theme);
+    this.viewControls = new HandCardControls(
+      theme,
+      isCoarsePointer() ? TOUCH_PREVIEW_CONTROL_SIZE : PREVIEW_CONTROL_SIZE,
+    );
     this.container.visible = false;
     this.container.sortableChildren = true;
     this.container.eventMode = "static";

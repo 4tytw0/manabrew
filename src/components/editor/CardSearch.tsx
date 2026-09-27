@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useCardSearch } from "@/hooks/useCards";
 import { useKeybindings } from "@/hooks/useKeybindings";
 import { Input } from "@/components/ui/input";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import { ManaSymbols } from "@/components/game/ManaSymbols";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -1177,17 +1178,18 @@ export function CardSearch({
               <FilterLabel>Stats</FilterLabel>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground/60 uppercase">pow</span>
-                <select
+                <AppSelect
                   className="h-6 text-xs pointer-coarse:h-9 pointer-coarse:text-base bg-background border rounded px-1"
+                  aria-label="Power comparison"
                   value={advanced.powerOp}
-                  onChange={(e) => setAdv("powerOp", e.target.value)}
+                  onValueChange={(value) => setAdv("powerOp", value)}
                 >
                   {COMPARISON_OPS.map((op) => (
-                    <option key={op} value={op}>
+                    <AppSelectOption key={op} value={op}>
                       {op}
-                    </option>
+                    </AppSelectOption>
                   ))}
-                </select>
+                </AppSelect>
                 <Input
                   className="h-6 text-xs w-10"
                   placeholder="—"
@@ -1197,17 +1199,18 @@ export function CardSearch({
               </div>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground/60 uppercase">tou</span>
-                <select
+                <AppSelect
                   className="h-6 text-xs pointer-coarse:h-9 pointer-coarse:text-base bg-background border rounded px-1"
+                  aria-label="Toughness comparison"
                   value={advanced.toughnessOp}
-                  onChange={(e) => setAdv("toughnessOp", e.target.value)}
+                  onValueChange={(value) => setAdv("toughnessOp", value)}
                 >
                   {COMPARISON_OPS.map((op) => (
-                    <option key={op} value={op}>
+                    <AppSelectOption key={op} value={op}>
                       {op}
-                    </option>
+                    </AppSelectOption>
                   ))}
-                </select>
+                </AppSelect>
                 <Input
                   className="h-6 text-xs w-10"
                   placeholder="—"
@@ -1217,17 +1220,18 @@ export function CardSearch({
               </div>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground/60 uppercase">loy</span>
-                <select
+                <AppSelect
                   className="h-6 text-xs pointer-coarse:h-9 pointer-coarse:text-base bg-background border rounded px-1"
+                  aria-label="Loyalty comparison"
                   value={advanced.loyaltyOp}
-                  onChange={(e) => setAdv("loyaltyOp", e.target.value)}
+                  onValueChange={(value) => setAdv("loyaltyOp", value)}
                 >
                   {COMPARISON_OPS.map((op) => (
-                    <option key={op} value={op}>
+                    <AppSelectOption key={op} value={op}>
                       {op}
-                    </option>
+                    </AppSelectOption>
                   ))}
-                </select>
+                </AppSelect>
                 <Input
                   className="h-6 text-xs w-10"
                   placeholder="—"
@@ -1380,27 +1384,29 @@ export function CardSearch({
 
             <FilterRow>
               <FilterLabel>Sort by</FilterLabel>
-              <select
+              <AppSelect
                 className="h-7 text-xs pointer-coarse:h-9 pointer-coarse:text-base bg-background border rounded px-2"
+                aria-label="Sort cards by"
                 value={advanced.sort}
-                onChange={(e) => setAdv("sort", e.target.value)}
+                onValueChange={(value) => setAdv("sort", value)}
               >
-                <option value="">Default (CMC)</option>
+                <AppSelectOption value="">Default (CMC)</AppSelectOption>
                 {SORT_OPTIONS.map((s) => (
-                  <option key={s.id} value={s.id}>
+                  <AppSelectOption key={s.id} value={s.id}>
                     {s.label}
-                  </option>
+                  </AppSelectOption>
                 ))}
-              </select>
-              <select
+              </AppSelect>
+              <AppSelect
                 className="h-7 text-xs pointer-coarse:h-9 pointer-coarse:text-base bg-background border rounded px-2"
+                aria-label="Sort direction"
                 value={advanced.sortDir}
-                onChange={(e) => setAdv("sortDir", e.target.value)}
+                onValueChange={(value) => setAdv("sortDir", value)}
               >
-                <option value="auto">Auto</option>
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
+                <AppSelectOption value="auto">Auto</AppSelectOption>
+                <AppSelectOption value="asc">Ascending</AppSelectOption>
+                <AppSelectOption value="desc">Descending</AppSelectOption>
+              </AppSelect>
             </FilterRow>
           </div>
         )}

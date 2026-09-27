@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import {
   Dialog,
   DialogContent,
@@ -696,18 +697,18 @@ function Toolbar({
           </Button>
         ))}
 
-        <select
+        <AppSelect
           value={groupMode}
-          onChange={(event) => onGroupModeChange(event.target.value as GroupMode)}
+          onValueChange={(value) => onGroupModeChange(value as GroupMode)}
           aria-label="Group pool cards"
           className="h-11 shrink-0 rounded-md border border-input bg-background px-2 text-base capitalize"
         >
           {(["rarity", "name", "cmc", "color"] as GroupMode[]).map((mode) => (
-            <option key={mode} value={mode}>
+            <AppSelectOption key={mode} value={mode}>
               {mode}
-            </option>
+            </AppSelectOption>
           ))}
-        </select>
+        </AppSelect>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

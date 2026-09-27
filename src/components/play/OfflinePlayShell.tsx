@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Boxes, Swords } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
 import { ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useIsShortScreen, useIsTouch } from "@/hooks/useBreakpoints";
@@ -29,18 +30,19 @@ export function OfflinePlayShell({ children }: OfflinePlayShellProps) {
   const compact = shortScreen && isTouch;
 
   const modeToggle = compact ? (
-    <select
+    <AppSelect
       aria-label="Offline play mode"
       value={location.pathname}
-      onChange={(event) => navigate(event.target.value, { replace: true })}
-      className="h-11 shrink-0 rounded-md border border-input bg-background px-3 text-base font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onValueChange={(value) => navigate(value, { replace: true })}
+      className="h-11 shrink-0 text-base font-medium"
     >
-      {TABS.map(({ to, label }) => (
-        <option key={to} value={to}>
+      {TABS.map(({ to, label, icon: Icon }) => (
+        <AppSelectOption key={to} value={to}>
+          <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
           {label}
-        </option>
+        </AppSelectOption>
       ))}
-    </select>
+    </AppSelect>
   ) : null;
   const renderTabs = () => (
     <div

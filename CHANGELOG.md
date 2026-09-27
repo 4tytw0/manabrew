@@ -8,6 +8,9 @@
 * **ui:** expose all mobile combat stops and restore taps after cancelled hand peeks
 * **ui:** fit compact square cards to bottom-anchored fields and retain accessible overflow stacks
 * **ui:** update live zone locks and keep narrow desktop source-card prompts usable
+* **ui:** use the deck editor menu style for landscape offline modes and app select controls
+* **ui:** match rules-preview view controls to printed previews
+* **ui:** remove synthesized game sounds, sound settings, and unused volume preferences
 
 ## [3.50.1](https://github.com/witchesofthehill/manabrew/compare/v3.50.0...v3.50.1) (2026-09-26)
 

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { usePresetDecks } from "@/stores/usePresetDecksStore";
 import { Button } from "@/components/ui/button";
+import { AppSelect, AppSelectOption } from "@/components/ui/AppSelect";
+import { FormatBadge } from "@/components/game/FormatBadge";
 import { EngineMark } from "@/components/lobby/EngineMark";
 import { PlaytestPlayersDialog } from "@/components/lobby/PlaytestPlayersDialog";
 import { TablePickerDialog } from "@/components/lobby/TablePickerDialog";
@@ -488,19 +490,20 @@ export function DeckVsSelector({
       {shortTouch ? (
         <div className="flex shrink-0 items-center gap-2 border-b bg-muted/5 px-4 py-1.5">
           {leadingControl}
-          <select
+          <AppSelect
             aria-label="Filter decks by format"
             value={selectedFormat ?? ""}
-            onChange={(event) => changeFormat(event.target.value || null)}
-            className="h-11 max-w-44 shrink-0 rounded-md border border-input bg-background px-3 text-base font-medium text-foreground"
+            onValueChange={(value) => changeFormat(value || null)}
+            className="h-11 max-w-44 shrink-0 text-base font-medium"
           >
-            <option value="">All formats</option>
+            <AppSelectOption value="">All formats</AppSelectOption>
             {GAME_FORMATS.map((format) => (
-              <option key={format.id} value={format.id}>
-                {format.name}
-              </option>
+              <AppSelectOption key={format.id} value={format.id}>
+                <FormatBadge formatId={format.id} />
+                <span className="truncate">{format.name}</span>
+              </AppSelectOption>
             ))}
-          </select>
+          </AppSelect>
           {searchControl}
         </div>
       ) : (

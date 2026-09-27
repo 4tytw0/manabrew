@@ -97,7 +97,6 @@ import type { HandActionOption } from "@/stores/useGameUIStore";
 import { deriveCardRailState, parsePrintedCardRailMetadata } from "@/components/game/cardRailState";
 import { peekCard, useScryfallStore } from "@/stores/useScryfallStore";
 import { scryfallToSampleGameCard } from "@/lib/sampleGameCard";
-import { installGameAudioUnlock, playGameAudioCue } from "@/lib/gameAudio";
 import { haptic } from "@/lib/haptics";
 import type { GameRuntime, ManualTabletopApi } from "@/game";
 const EMPTY_PREVIEW_STACK: StackSpec = {
@@ -1162,66 +1161,30 @@ export default function Game({ exitTo }: GameProps = {}) {
     gameView?.players?.find((p) => p.id === myPlayerSlot) ??
     gameView?.players?.find((p) => p.isHuman) ??
     gameView?.players?.[0];
-  useEffect(() => installGameAudioUnlock(), []);
   const previousTurnRef = useRef<number | null>(null);
   useEffect(() => {
     const turn = gameView?.turn ?? null;
     if (turn === null) return;
     if (previousTurnRef.current !== null && turn !== previousTurnRef.current) {
-      playGameAudioCue("turn");
       if (gameView?.activePlayerId === me?.id) haptic("confirm");
     }
     previousTurnRef.current = turn;
   }, [gameView?.activePlayerId, gameView?.turn, me?.id]);
-  const previousPromptRef = useRef(currentPrompt?.promptId);
+  const previousPriorityPlayerIdRef = useRef(gameView?.priorityPlayerId);
   useEffect(() => {
-    const promptId = currentPrompt?.promptId;
+    const priorityPlayerId = gameView?.priorityPlayerId;
+    if (!priorityPlayerId) return;
     if (
-      promptId !== undefined &&
-      previousPromptRef.current !== undefined &&
-      promptId !== previousPromptRef.current &&
-      gameView?.priorityPlayerId === me?.id
+      previousPriorityPlayerIdRef.current &&
+      previousPriorityPlayerIdRef.current !== priorityPlayerId &&
+      priorityPlayerId === me?.id
     ) {
-      playGameAudioCue("priority");
       haptic("select");
     }
-    previousPromptRef.current = promptId;
-  }, [currentPrompt?.promptId, gameView?.priorityPlayerId, me?.id]);
-  const meLife = me?.life ?? null;
-  const previousLifeRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (meLife === null) return;
-    if (previousLifeRef.current !== null && meLife < previousLifeRef.current) {
-      playGameAudioCue("damage");
-    }
-    previousLifeRef.current = meLife;
-  }, [meLife]);
-  const previousFlashRef = useRef<string | null>(null);
-  useEffect(() => {
-    const key =
-      activeFlash?.kind === "card"
-        ? `${activeFlash.cardId}:${activeFlash.cardName}:${activeFlash.setCode}`
-        : null;
-    if (key && key !== previousFlashRef.current) playGameAudioCue("card");
-    previousFlashRef.current = key;
-  }, [activeFlash]);
-  const previousAudioLogRef = useRef<number | null>(null);
-  useEffect(() => {
-    const entry = gameLog.at(-1);
-    if (!entry) return;
-    if (
-      previousAudioLogRef.current !== null &&
-      entry.timestampMs !== previousAudioLogRef.current &&
-      entry.entryType === "stack" &&
-      /\bresolved?\b/i.test(entry.message)
-    ) {
-      playGameAudioCue("resolve");
-    }
-    previousAudioLogRef.current = entry.timestampMs;
-  }, [gameLog]);
+    previousPriorityPlayerIdRef.current = priorityPlayerId;
+  }, [gameView?.priorityPlayerId, me?.id]);
   useEffect(() => {
     if (!protocolError) return;
-    playGameAudioCue("reject");
     haptic("warn");
   }, [protocolError]);
   useEffect(() => {
