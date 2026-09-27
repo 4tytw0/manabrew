@@ -318,7 +318,12 @@ export class BoardScene {
   private cursorViewportY = 0;
   private cursorListener: (e: MouseEvent) => void;
   private canvasLeaveListener: () => void;
+  private readonly touchFocusOnFelt: boolean;
   private onStageMove = (e: FederatedPointerEvent): void => this.onGlobalMove(e);
+  private onStageDown = (e: FederatedPointerEvent): void => {
+    if (this.touchFocusOnFelt && e.pointerType === "touch" && e.target === this.app.stage)
+      this.updateHoveredOpponent(e.global.x, e.global.y);
+  };
   private onStageUp = (e: FederatedPointerEvent): void => this.onGlobalUp(e);
   private onStageTapCapture = (e: FederatedPointerEvent): void => {
     if (this.tapSuppressedPointers.has(e.pointerId)) e.stopImmediatePropagation();
@@ -328,10 +333,12 @@ export class BoardScene {
     app: Application,
     callbacks: GameCanvasCallbacks,
     presentation: BoardScenePresentation,
+    touchFocusOnFelt = false,
   ) {
     this.app = app;
     this.callbacks = callbacks;
     this.presentation = presentation;
+    this.touchFocusOnFelt = touchFocusOnFelt;
     this.theme = getTheme();
 
     this.root = new Container();
@@ -402,6 +409,7 @@ export class BoardScene {
     this.floaterLayer.zIndex = 9000;
     this.root.addChild(this.floaterLayer);
 
+    app.stage.on("pointerdown", this.onStageDown);
     app.stage.on("pointermove", this.onStageMove);
     app.stage.on("pointerup", this.onStageUp);
     app.stage.on("pointerupoutside", this.onStageUp);
@@ -1030,11 +1038,6 @@ export class BoardScene {
     return false;
   }
 
-  private isOverStack(x: number, y: number): boolean {
-    const b = this.stackProvider?.getBounds();
-    return !!b && x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
-  }
-
   private collapseStackPeeks(): void {
     for (const rec of this.regions.values()) rec.region.collapseStackPeek();
   }
@@ -1138,7 +1141,7 @@ export class BoardScene {
       W > 0 &&
       localY >= 0 &&
       localY <= this.topHeight &&
-      !this.isOverStack(canvasX, canvasY)
+      !this.stackProvider?.hitTest(canvasX, canvasY)
     ) {
       for (let i = 0; i < n; i++) {
         const zone = this.regions.get(this.opponentIds[i]!)?.zone;
@@ -2665,6 +2668,7 @@ export class BoardScene {
     this.app.canvas.removeEventListener("pointerleave", this.canvasLeaveListener);
     this.app.stage.off("pointerleave", this.canvasLeaveListener);
     this.app.ticker.remove(this.tick, this);
+    this.app.stage.off("pointerdown", this.onStageDown);
     this.app.stage.off("pointermove", this.onStageMove);
     this.app.stage.off("pointerup", this.onStageUp);
     this.app.stage.off("pointerupoutside", this.onStageUp);

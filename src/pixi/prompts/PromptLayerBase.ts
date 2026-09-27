@@ -35,7 +35,12 @@ import { usePromptPreferencesStore } from "@/stores/usePromptPreferencesStore";
 import { usePreferencesStore } from "@/stores/usePreferencesStore";
 import { type PromptActionViewKey } from "@/stores/useGameDevStore";
 import { resolveCombo, useKeybindingsStore } from "@/stores/useKeybindingsStore";
-import { comboFromEvent, combosMatch, formatCombo } from "@/lib/keybindings";
+import {
+  comboFromEvent,
+  combosMatch,
+  formatCombo,
+  setVirtualTextInputActive,
+} from "@/lib/keybindings";
 import type { CardDto } from "@/protocol";
 import { PromptButton, type PromptButtonOptions } from "./PromptButton";
 import { PromptGlow } from "./PromptGlow";
@@ -1324,6 +1329,12 @@ export abstract class PromptLayerBase {
 
   protected setSelectionFilterFocused(focused: boolean): void {
     this.selectionFilterFocused = focused;
+    if (
+      this.spec?.currentPrompt?.input.type === "chooseCards" &&
+      this.layerPresentation.modalBodyFit === "scroll"
+    ) {
+      setVirtualTextInputActive(this, focused);
+    }
     this.selectionFilterBlinkAt = performance.now();
     const filter = this.selectionFilterView;
     if (!filter) return;

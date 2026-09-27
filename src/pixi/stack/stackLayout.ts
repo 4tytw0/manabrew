@@ -7,7 +7,7 @@ export const STACK_CENTER_OFFSET_Y = -60;
 export const STACK_PEEK_W = 16;
 
 export const STACK_COMPACT_TOP_INSET = 16;
-export const STACK_COMPACT_BOTTOM_RESERVE = 72;
+export const STACK_COMPACT_BOTTOM_RESERVE = 104;
 
 export interface StackLayoutCard {
   width: number;
@@ -88,10 +88,7 @@ export function computeStackLayout(input: StackLayoutInput): StackLayoutResult {
   const panelTop = input.compact
     ? Math.max(
         STACK_COMPACT_TOP_INSET,
-        Math.min(
-          input.viewHeight / 2 - pileHeight / 2 + STACK_CENTER_OFFSET_Y,
-          input.viewHeight - STACK_COMPACT_BOTTOM_RESERVE - pileHeight,
-        ),
+        input.viewHeight - STACK_COMPACT_BOTTOM_RESERVE - pileHeight,
       )
     : input.viewHeight / 2 - pileHeight / 2 + STACK_CENTER_OFFSET_Y;
   const centerY = panelTop + pileHeight / 2;

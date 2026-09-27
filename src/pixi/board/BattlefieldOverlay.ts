@@ -1,6 +1,7 @@
 import {
   Container,
   Graphics,
+  Rectangle,
   Sprite,
   Text,
   type FederatedPointerEvent,
@@ -38,7 +39,7 @@ import {
   SYMBOL_TAP,
   SYMBOL_UNTAP,
 } from "../constants";
-import { CARD_H, CARD_W } from "@/components/game/game.constants";
+import { CARD_W } from "@/components/game/game.constants";
 import type { OverlayHost, SpriteEntry } from "./types";
 
 interface ActionKind {
@@ -175,18 +176,15 @@ export class BattlefieldOverlay {
     }
     if (pending.length > 0) rows.push(pending);
 
-    const btnH = CARD_H / rows.length;
+    const btnH = this.cardHeight() / rows.length;
 
     rows.forEach((rowEntries, rowIndex) => {
       const btnW = CARD_W / rowEntries.length;
       rowEntries.forEach(({ ab, letters }, colIndex) => {
-        const x = colIndex * btnW;
-        const y = rowIndex * btnH;
-        const currentW = rowEntries.length === 1 ? CARD_W : btnW;
-        const controlX = x + 2;
-        const controlH = Math.min(40, btnH - 4);
-        const controlY = y + (btnH - controlH) / 2;
-        const controlW = currentW - 4;
+        const controlX = colIndex * btnW;
+        const controlY = rowIndex * btnH;
+        const controlW = btnW;
+        const controlH = btnH;
         const letter = letters[0];
         const color = manaColorFor(
           letter,
@@ -195,6 +193,7 @@ export class BattlefieldOverlay {
         );
 
         const btn = new Graphics();
+        btn.hitArea = new Rectangle(controlX, controlY, controlW, controlH);
         const paintBtn = (highlighted: boolean) => {
           btn.clear();
           btn.roundRect(
@@ -249,6 +248,7 @@ export class BattlefieldOverlay {
             paintBtn(highlighted);
             icons.forEach((icon) => icon.scale.set(highlighted ? ICON_HOVER_SCALE : 1));
           },
+          true,
         );
       });
     });
@@ -287,13 +287,14 @@ export class BattlefieldOverlay {
     }
     const selectionOnly = kind.isSelectable && !kind.isTappable && !kind.isUntappable;
     const cardHeight = this.cardHeight();
-    const fullCardButton = selectionOnly || cardHeight === CARD_W;
+    const fullCardButton = selectionOnly || kind.isTappable || cardHeight === CARD_W;
     const controlX = fullCardButton ? 0 : 6;
     const controlY = fullCardButton ? 0 : (cardHeight - 40) / 2;
     const controlW = fullCardButton ? CARD_W : CARD_W - 12;
     const controlH = fullCardButton ? cardHeight : 40;
 
     const btn = new Graphics();
+    if (fullCardButton) btn.hitArea = new Rectangle(0, 0, CARD_W, cardHeight);
     const paintBtn = (highlighted: boolean) => {
       btn.clear();
       btn.roundRect(controlX, controlY, controlW, controlH, Math.min(CARD_RADIUS, controlH / 2));

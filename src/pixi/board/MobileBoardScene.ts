@@ -7,7 +7,7 @@ import { MobileBoardScenePresentation } from "./MobileBoardScenePresentation";
 
 export class MobileBoardScene extends BoardScene {
   constructor(app: Application, callbacks: GameCanvasCallbacks) {
-    super(app, callbacks, new MobileBoardScenePresentation());
+    super(app, callbacks, new MobileBoardScenePresentation(), true);
   }
 
   setMobileHandOpen(open: boolean): void {

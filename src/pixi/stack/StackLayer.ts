@@ -335,10 +335,6 @@ export class StackLayer implements StackAnchorProvider {
     return seeds;
   }
 
-  getBounds(): ScreenBounds | null {
-    return this.bounds;
-  }
-
   hitTest(x: number, y: number): boolean {
     if (!this.bounds) return false;
     if (

@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Fixes
+* **ui:** move the mobile stack below opponent fields and let touches outside its cards switch fields
+* **ui:** cover full battlefield cards with mana-tap actions on mobile and desktop
+* **ui:** filter desktop card-choice prompts by name without losing selected cards
 * **ui:** grow compact stack cards while keeping short-screen controls clear
 * **ui:** return to the battlefield after casting from the command zone
 * **ui:** dismiss touch card previews with one outside tap without activating the card beneath

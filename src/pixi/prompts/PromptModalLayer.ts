@@ -639,83 +639,22 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     let y = 4;
 
     if (showFilter) {
-      const filter = new Container();
+      const filterParent = compactSelection ? panel : body;
       if (compactSelection) {
         const state = this.modalBody!;
-        filter.position.set(PANEL_PADDING, state.bodyTop);
-        panel.addChild(filter);
         state.bodyTop += 52;
         this.resizeModalShell(state, state.height);
         body.position.set(PANEL_PADDING, state.bodyTop);
-      } else {
-        body.addChild(filter);
       }
-      const filterBackground = new Graphics();
-      filterBackground.eventMode = "static";
-      filterBackground.cursor = "text";
-      filterBackground.accessible = true;
-      filterBackground.accessibleTitle = "Filter choices. Start typing to search.";
-      filterBackground.tabIndex = 0;
-      filterBackground.on("focusin", () => this.setSelectionFilterFocused(true));
-      filterBackground.on("focusout", () => this.setSelectionFilterFocused(false));
-      const searchIcon = this.makeIcon(
-        "lucide-search",
-        15,
-        this.selectionFilter
-          ? this.theme.appTheme.foreground
-          : this.theme.appTheme["muted-foreground"],
+      this.renderChoiceFilter(
+        filterParent,
+        availableWidth,
+        compactSelection ? this.modalBody!.bodyTop - 52 : y,
+        visibleOptions.length,
+        "Search choices",
+        compactSelection,
+        compactSelection ? PANEL_PADDING : 0,
       );
-      searchIcon.position.set(16, y + 20);
-      const filterText = promptText(
-        this.selectionFilter || "Search choices",
-        compactSelection ? 15 : 12,
-        this.selectionFilter
-          ? this.theme.appTheme.foreground
-          : this.theme.appTheme["muted-foreground"],
-        { width: availableWidth - 132, truncate: true },
-      );
-      filterText.position.set(30, y + 12);
-      const resultCount = promptText(
-        `${visibleOptions.length} result${visibleOptions.length === 1 ? "" : "s"}`,
-        compactSelection ? 12 : 10,
-        this.theme.appTheme["muted-foreground"],
-        { weight: "600" },
-      );
-      resultCount.anchor.set(1, 0.5);
-      resultCount.position.set(availableWidth - (this.selectionFilter ? 42 : 10), y + 20);
-      const caret = new Graphics()
-        .rect(filterText.x + (this.selectionFilter ? filterText.width + 2 : 0), y + 12, 1.5, 16)
-        .fill({ color: hexToNum(this.theme.gameTheme.cardRing) });
-      caret.eventMode = "none";
-      filter.addChild(filterBackground, searchIcon, filterText, resultCount, caret);
-      this.selectionFilterView = {
-        container: filter,
-        background: filterBackground,
-        caret,
-        width: availableWidth,
-        y,
-      };
-      if (this.selectionFilter) {
-        const clear = this.makeButton(
-          "",
-          () => {
-            this.selectionFilter = "";
-            this.selectionFilterFocused = true;
-            this.rebuild();
-          },
-          {
-            title: "Clear filter",
-            icon: "lucide-x",
-            outline: true,
-            compact: true,
-            width: 30,
-            height: 30,
-          },
-        );
-        clear.position.set(availableWidth - 34, y + 5);
-        filter.addChild(clear);
-      }
-      this.setSelectionFilterFocused(this.selectionFilterFocused);
       if (!compactSelection) y += 52;
     }
 
@@ -993,6 +932,82 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     return total;
   }
 
+  protected renderChoiceFilter(
+    parent: Container,
+    width: number,
+    y: number,
+    resultCount: number,
+    placeholder: string,
+    compact: boolean,
+    x = 0,
+  ): void {
+    const filter = new Container();
+    filter.position.set(x, y);
+    parent.addChild(filter);
+    const background = new Graphics();
+    background.eventMode = "static";
+    background.cursor = "text";
+    background.accessible = true;
+    background.accessibleTitle = `${placeholder}. Start typing to search.`;
+    background.tabIndex = 0;
+    background.on("focusin", () => this.setSelectionFilterFocused(true));
+    background.on("focusout", () => this.setSelectionFilterFocused(false));
+    const searchIcon = this.makeIcon(
+      "lucide-search",
+      15,
+      this.selectionFilter
+        ? this.theme.appTheme.foreground
+        : this.theme.appTheme["muted-foreground"],
+    );
+    searchIcon.position.set(16, 20);
+    const searchText = promptText(
+      this.selectionFilter || placeholder,
+      compact ? 15 : 12,
+      this.selectionFilter
+        ? this.theme.appTheme.foreground
+        : this.theme.appTheme["muted-foreground"],
+      { width: width - 132, truncate: true },
+    );
+    searchText.position.set(30, 12);
+    const countText = promptText(
+      `${resultCount} result${resultCount === 1 ? "" : "s"}`,
+      compact ? 12 : 10,
+      this.theme.appTheme["muted-foreground"],
+      { weight: "600" },
+    );
+    countText.anchor.set(1, 0.5);
+    countText.position.set(width - (this.selectionFilter ? 42 : 10), 20);
+    const caret = new Graphics()
+      .rect(searchText.x + (this.selectionFilter ? searchText.width + 2 : 0), 12, 1.5, 16)
+      .fill({ color: hexToNum(this.theme.gameTheme.cardRing) });
+    caret.eventMode = "none";
+    filter.addChild(background, searchIcon, searchText, countText, caret);
+    this.selectionFilterView = { container: filter, background, caret, width, y: 0 };
+    if (this.selectionFilter) {
+      const clear = this.makeButton(
+        "",
+        () => {
+          this.selectionFilter = "";
+          this.selectionFilterFocused = true;
+          this.modalScrollOffset = 0;
+          this.modalScrollTarget = 0;
+          this.rebuild();
+        },
+        {
+          title: "Clear filter",
+          icon: "lucide-x",
+          outline: true,
+          compact: true,
+          width: 30,
+          height: 30,
+        },
+      );
+      clear.position.set(width - 34, 5);
+      filter.addChild(clear);
+    }
+    this.setSelectionFilterFocused(this.selectionFilterFocused);
+  }
+
   protected renderCards(
     presentation: PromptPresentation,
     cards: CardDto[],
@@ -1000,6 +1015,17 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     max: number,
     reveal: boolean,
   ): void {
+    const showFilter =
+      !reveal && cards.length > 1 && this.layerPresentation.modalBodyFit === "scroll";
+    const normalizedFilter = this.selectionFilter.toLocaleLowerCase();
+    const visibleIndices = showFilter
+      ? cards.reduce<number[]>((indices, card, index) => {
+          if (card.identity.name.toLocaleLowerCase().includes(normalizedFilter))
+            indices.push(index);
+          return indices;
+        }, [])
+      : null;
+    const visibleCount = visibleIndices?.length ?? cards.length;
     const horizontalScroll = this.layerPresentation.cardLayout === "horizontal-scroll";
     const { width: preferredCardWidth } = this.promptCardDimensions(
       this.layerPresentation.cardMaxHeight(this.viewportHeight),
@@ -1035,7 +1061,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
             Math.floor((cardAreaWidth + PROMPT_CARD_GAP) / (cardWidth + PROMPT_CARD_GAP)),
           ),
         );
-    const rows = horizontalScroll ? Math.min(1, cards.length) : Math.ceil(cards.length / columns);
+    const rows = horizontalScroll ? Math.min(1, cards.length) : Math.ceil(visibleCount / columns);
     const compactScrollRow = horizontalScroll;
     const compactCardSpacing =
       cards.length <= 1
@@ -1050,7 +1076,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       this.viewportHeight - 24,
       244 + rows * (cardHeight + PROMPT_CARD_ROW_GAP),
     );
-    const { body, footer } = this.createModalShell(
+    const { panel, body, footer } = this.createModalShell(
       width,
       height,
       reveal
@@ -1066,7 +1092,32 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       36,
       true,
     );
+    if (showFilter) {
+      const state = this.modalBody!;
+      this.renderChoiceFilter(
+        panel,
+        width - PANEL_PADDING * 2,
+        state.bodyTop,
+        visibleCount,
+        "Search cards by name",
+        false,
+        PANEL_PADDING,
+      );
+      state.bodyTop += 52;
+      this.resizeModalShell(state, state.height);
+      body.position.set(PANEL_PADDING, state.bodyTop);
+    }
     const startY = 4;
+    if (showFilter && visibleCount === 0) {
+      const empty = promptText(
+        "No cards match your search",
+        12,
+        this.theme.appTheme["muted-foreground"],
+        { width: width - PANEL_PADDING * 2, align: "center" },
+      );
+      empty.position.set(0, startY + 22);
+      body.addChild(empty);
+    }
     const compactScrollRowWidth =
       cards.length > 0 ? (cards.length - 1) * compactCardSpacing + cardWidth : 0;
     const compactScrollOverflow = compactScrollRow && compactScrollRowWidth > cardAreaWidth;
@@ -1076,7 +1127,9 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       cardRow.once("destroyed", () => gsap.killTweensOf(cardRow));
       body.addChild(cardRow);
     }
-    cards.forEach((card, index) => {
+    for (let position = 0; position < visibleCount; position++) {
+      const index = visibleIndices?.[position] ?? position;
+      const card = cards[index]!;
       const selected = this.selectedIds.has(card.id);
       const disabled = !reveal && max !== 1 && this.selectedIds.size >= max && !selected;
       const cardSize = cardSizes[index]!;
@@ -1099,11 +1152,11 @@ export abstract class PromptModalLayer extends PromptLayerBase {
               this.rebuild();
             },
       );
-      const row = horizontalScroll ? 0 : Math.floor(index / columns);
-      const column = horizontalScroll ? index : index % columns;
-      const cardsInRow = Math.min(columns, cards.length - row * columns);
+      const row = horizontalScroll ? 0 : Math.floor(position / columns);
+      const column = horizontalScroll ? position : position % columns;
+      const cardsInRow = Math.min(columns, visibleCount - row * columns);
       const rowWidth = horizontalScroll
-        ? cardWidth + compactCardSpacing * Math.max(0, cards.length - 1)
+        ? cardWidth + compactCardSpacing * Math.max(0, visibleCount - 1)
         : cardsInRow * cardWidth + Math.max(0, cardsInRow - 1) * PROMPT_CARD_GAP;
       const rowX = CARD_TILE_EDGE_INSET + Math.max(0, (cardAreaWidth - rowWidth) / 2);
       tile.position.set(
@@ -1113,7 +1166,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
         startY + row * (cardHeight + PROMPT_CARD_ROW_GAP) + (cardHeight - cardSize.height) / 2,
       );
       (cardRow ?? body).addChild(tile);
-    });
+    }
     if (cardRow) {
       const panLimit = cardAreaWidth - compactScrollRowWidth;
       const rowsHeight = rows * (cardHeight + PROMPT_CARD_ROW_GAP);

@@ -38,5 +38,5 @@ export interface StackAnchorProvider {
   getAnchor(stackObjectId: string, toward?: ScreenPos): ScreenPos | null;
   getCastingAnchor(sourceCardId: string, toward?: ScreenPos): ScreenPos | null;
   getSeeds(): Array<{ cardId: string; x: number; y: number; scale: number }>;
-  getBounds(): ScreenBounds | null;
+  hitTest(x: number, y: number): boolean;
 }

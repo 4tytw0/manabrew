@@ -333,7 +333,11 @@ export class PromptLayer extends PromptModalLayer {
     ) {
       setVirtualTextInputActive(
         this,
-        input.type === "chooseFromSelection" && input.options.length > 5,
+        (input.type === "chooseFromSelection" && input.options.length > 5) ||
+          (input.type === "chooseCards" &&
+            input.cards.length > 1 &&
+            this.layerPresentation.modalBodyFit === "scroll" &&
+            this.selectionFilterFocused),
       );
       this.modalOpen = true;
       this.renderModal();
@@ -2173,9 +2177,13 @@ export class PromptLayer extends PromptModalLayer {
       return;
     }
     const input = this.spec.currentPrompt?.input;
+    const searchingCards =
+      input?.type === "chooseCards" &&
+      input.cards.length > 1 &&
+      this.layerPresentation.modalBodyFit === "scroll";
     if (
-      input?.type === "chooseFromSelection" &&
-      input.options.length > 5 &&
+      ((input?.type === "chooseFromSelection" && input.options.length > 5) ||
+        (searchingCards && this.selectionFilterFocused)) &&
       (event.key === "Backspace" ||
         (event.key.length === 1 &&
           (this.selectionFilterFocused || event.code !== "Space") &&
@@ -2189,12 +2197,16 @@ export class PromptLayer extends PromptModalLayer {
         event.key === "Backspace"
           ? this.selectionFilter.slice(0, -1)
           : `${this.selectionFilter}${event.key}`;
+      this.modalScrollOffset = 0;
+      this.modalScrollTarget = 0;
       this.rebuild();
       return;
     }
     if (event.key === "Escape" && this.selectionFilter) {
       event.preventDefault();
       this.selectionFilter = "";
+      this.modalScrollOffset = 0;
+      this.modalScrollTarget = 0;
       this.rebuild();
       return;
     }
