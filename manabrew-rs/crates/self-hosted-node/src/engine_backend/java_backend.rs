@@ -1380,6 +1380,7 @@ pub fn run_hosted_engine_game(
     game_variant: String,
     local_player_index: Option<usize>,
     ai_player_indices: Vec<usize>,
+    bot_player_indices: Vec<usize>,
     starting_life: i32,
     remote_prompt_tx: std_mpsc::Sender<(usize, AgentMessage)>,
     remote_response_rxs: Vec<(usize, std_mpsc::Receiver<ClientToServerMessage>)>,
@@ -1395,6 +1396,7 @@ pub fn run_hosted_engine_game(
         game_variant,
         local_player_index,
         ai_player_indices,
+        bot_player_indices,
         starting_life,
         remote_prompt_tx,
         remote_response_rxs,
@@ -1414,6 +1416,7 @@ pub fn run_hosted_engine_game(
     _game_variant: String,
     _local_player_index: Option<usize>,
     _ai_player_indices: Vec<usize>,
+    _bot_player_indices: Vec<usize>,
     _starting_life: i32,
     _remote_prompt_tx: std_mpsc::Sender<(usize, AgentMessage)>,
     _remote_response_rxs: Vec<(usize, std_mpsc::Receiver<ClientToServerMessage>)>,
@@ -1475,6 +1478,7 @@ fn run_hosted_engine_game_inner(
     game_variant: String,
     local_player_index: Option<usize>,
     ai_player_indices: Vec<usize>,
+    bot_player_indices: Vec<usize>,
     starting_life: i32,
     remote_prompt_tx: std_mpsc::Sender<(usize, AgentMessage)>,
     remote_response_rxs: Vec<(usize, std_mpsc::Receiver<ClientToServerMessage>)>,
@@ -1500,6 +1504,11 @@ fn run_hosted_engine_game_inner(
     for &idx in &ai_player_indices {
         if let Some(player) = players.get_mut(idx) {
             player.ai = true;
+        }
+    }
+    for &idx in &bot_player_indices {
+        if let Some(player) = players.get_mut(idx) {
+            player.bot = true;
         }
     }
     let request = StartGameRequest::new(
@@ -1647,14 +1656,12 @@ fn run_hosted_engine_game_inner(
                         decision_submitted = Some(Instant::now());
                         last_activity = Instant::now();
                     }
-                    Ok(ClientToServerMessage::Directive {
-                        directive: DirectiveInput::Concede,
-                    }) => {
+                    Ok(ClientToServerMessage::Directive { directive }) => {
                         // A directive can arrive while another player's prompt
                         // is open (this loop drains every seat), so it names
                         // its seat.
-                        let directive_json = directive_concede_json(*player_index);
-                        debug!(player_index, %directive_json, "submitting concede directive to java");
+                        let directive_json = directive_json(*player_index, directive);
+                        debug!(player_index, %directive_json, "submitting directive to java");
                         engine.submit_action(&session_id, &directive_json)?;
                         last_activity = Instant::now();
                     }
@@ -2131,8 +2138,8 @@ pub fn run_concede_smoke() -> Result<(), String> {
 }
 
 #[cfg(forge_backend)]
-fn directive_concede_json(player: usize) -> String {
-    format!(r#"{{"type":"directive","directive":{{"type":"concede"}},"player":{player}}}"#)
+fn directive_json(player: usize, directive: DirectiveInput) -> String {
+    serde_json::json!({ "type": "directive", "directive": directive, "player": player }).to_string()
 }
 
 #[cfg(feature = "java-forge")]
@@ -2213,13 +2220,13 @@ fn run_concede_game<B: JavaBridge>(
 
         if !conceded && acted >= concede_after {
             info!(conceder, acted, "concede smoke: injecting concede");
-            session.submit_action(&directive_concede_json(conceder))?;
+            session.submit_action(&directive_json(conceder, DirectiveInput::Concede))?;
             conceded = true;
             last_prompt_json = None;
             continue;
         }
         if conceded && player == conceder {
-            session.submit_action(&directive_concede_json(conceder))?;
+            session.submit_action(&directive_json(conceder, DirectiveInput::Concede))?;
             last_prompt_json = Some(prompt_json);
             continue;
         }
@@ -2916,6 +2923,7 @@ pub struct PlayerConfig {
     deck: Vec<CardIdentityForJava>,
     commander_names: Vec<String>,
     ai: bool,
+    bot: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -2964,6 +2972,7 @@ impl PlayerConfig {
             deck: deck.iter().map(CardIdentityForJava::from).collect(),
             commander_names,
             ai: false,
+            bot: false,
         }
     }
 }

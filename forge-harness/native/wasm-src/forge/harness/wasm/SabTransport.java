@@ -91,6 +91,32 @@ public final class SabTransport implements InteractiveBridge {
     @JS("return (globalThis.__mbSeats || []).length;")
     static native int seatCount();
 
+    @JS.Coerce
+    @JS("globalThis.__mbLanes = (globalThis.__forgeDirectiveLanes || []).map((lane) => ({"
+        + "  sig: new Int32Array(lane, 0, 2), data: new Uint8Array(lane, 8) }));")
+    static native void bindDirectiveLanes();
+
+    @JS.Coerce
+    @JS("return globalThis.__mbLanes.findIndex((lane) => Atomics.load(lane.sig, 0) === 1);")
+    static native int fullDirectiveLane();
+
+    @JS.Coerce
+    @JS("const lane = globalThis.__mbLanes[index];"
+        + "const directive = new TextDecoder().decode(lane.data.slice(0, Atomics.load(lane.sig, 1)));"
+        + "Atomics.store(lane.sig, 0, 0);"
+        + "return directive;")
+    static native String takeDirective(int index);
+
+    @JS.Coerce
+    @JS("const sig = globalThis.__mbSeats[globalThis.__mbSeatOf(seat)].sig;"
+        + "const cur = Atomics.load(sig, 0);"
+        + "if (cur === 2) return true;"
+        + "Atomics.wait(sig, 0, cur, timeoutMs);"
+        + "return Atomics.load(sig, 0) === 2;")
+    static native boolean awaitAnswer(int seat, int timeoutMs);
+
+    private static final int LANE_POLL_MS = 25;
+
     private final java.util.function.IntFunction<String> snapshots;
     /**
      * Seats a Manabot plays. A bot reads one board, the one it is prompted
@@ -114,6 +140,9 @@ public final class SabTransport implements InteractiveBridge {
     private int turnAtLastPrompt = -1;
     /** Kept clear of the in-game sequence, which the session owns. */
     private long finalPromptId = 1_000_000;
+    /** The prompt a seat holds and has not answered; a directive leaves it open. */
+    private String openPrompt;
+    private int openSeat = -1;
 
     private static String inputType(final String promptJson) {
         try {
@@ -146,11 +175,42 @@ public final class SabTransport implements InteractiveBridge {
         final String type = inputType(promptJson);
         final boolean dice = "diceRolled".equals(type);
         final boolean bot = !dice && botSeats.contains(seat);
+        final long botStartedAt = bot ? System.currentTimeMillis() : 0;
+        if (seat != openSeat || !promptJson.equals(openPrompt)) {
+            publishPrompt(seat, promptJson, type, dice, bot);
+            if (dice) {
+                return exchangeWithAllSeats(promptJson);
+            }
+            openSeat = seat;
+            openPrompt = promptJson;
+        }
+        while (!awaitAnswer(seat, LANE_POLL_MS)) {
+            final int lane = fullDirectiveLane();
+            if (lane >= 0) {
+                final JsonObject message = new JsonObject();
+                message.add("directive", JsonParser.parseString(takeDirective(lane)));
+                return decodeMessage(lane, message);
+            }
+        }
+        openPrompt = null;
+        openSeat = -1;
+
+        final JsonObject message = JsonParser.parseString(recv(seat)).getAsJsonObject();
+        if (bot) {
+            botMsSinceRecv += System.currentTimeMillis() - botStartedAt;
+        } else {
+            lastRecvAt = System.currentTimeMillis();
+            botMsSinceRecv = 0;
+        }
+        return decodeMessage(seat, message);
+    }
+
+    private void publishPrompt(
+            final int seat, final String promptJson, final String type, final boolean dice, final boolean bot) {
         // Broadcast before the telemetry post so `turnNow` is the turn this
         // prompt belongs to. A bot's prompt updates the bot alone: the people
         // at the table see the board on their own next prompt, as they did
         // when Forge's AI held these seats.
-        final long botStartedAt = bot ? System.currentTimeMillis() : 0;
         if (bot) {
             sendState(seat);
         } else {
@@ -176,19 +236,9 @@ public final class SabTransport implements InteractiveBridge {
             }
             turnAtLastPrompt = turnNow;
         }
-        if (dice) {
-            return exchangeWithAllSeats(promptJson);
+        if (!dice) {
+            sendTagged(seat, "prompt", "prompt", promptJson);
         }
-        sendTagged(seat, "prompt", "prompt", promptJson);
-
-        final JsonObject message = JsonParser.parseString(recv(seat)).getAsJsonObject();
-        if (bot) {
-            botMsSinceRecv += System.currentTimeMillis() - botStartedAt;
-        } else {
-            lastRecvAt = System.currentTimeMillis();
-            botMsSinceRecv = 0;
-        }
-        return decodeMessage(seat, message);
     }
 
     private String exchangeWithAllSeats(final String promptJson) {

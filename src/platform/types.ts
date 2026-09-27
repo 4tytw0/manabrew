@@ -46,10 +46,6 @@ export interface SendDirectiveParams {
   directive: DirectiveInput;
 }
 
-export interface RestoreSnapshotParams {
-  checkpointId: number;
-}
-
 export interface ServerConnectParams {
   host: string;
   port: number;
@@ -135,8 +131,6 @@ export interface IGameApi {
   sendDirective(params: SendDirectiveParams): Promise<void>;
 
   endGame(): Promise<void>;
-
-  restoreSnapshot(params: RestoreSnapshotParams): Promise<void>;
 
   getPrompt(): Promise<Prompt | null>;
 }

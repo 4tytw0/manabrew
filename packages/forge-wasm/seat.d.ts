@@ -20,6 +20,20 @@ export declare function createSeat(buffer: SharedArrayBuffer): ForgeSeat;
 export declare function readSeatMessage(seat: ForgeSeat): string | null;
 export declare function writeSeatMessage(seat: ForgeSeat, message: unknown): void;
 export declare function deliverSeatDirective(seat: ForgeSeat, directive: unknown): void;
+
+export interface ForgeDirectiveLane {
+  readonly signal: Int32Array;
+  readonly data: Uint8Array;
+  queue: unknown[];
+  flushScheduled: boolean;
+}
+
+export declare function createDirectiveLanes(buffers: SharedArrayBuffer[]): ForgeDirectiveLane[];
+export declare function writeDirectiveLane(
+  lanes: ForgeDirectiveLane[],
+  seatIndex: number,
+  directive: unknown,
+): void;
 export declare function noteSeatMessage(seat: ForgeSeat, message: unknown): void;
 export declare function pollSeat<T = unknown>(
   seat: ForgeSeat,

@@ -1,4 +1,5 @@
 const SAB_SIZE = 256 * 1024;
+const DIRECTIVE_LANE_BYTES = 4096;
 let launcherUrl = null;
 let wasmUrl = null;
 
@@ -90,6 +91,15 @@ function gameSeed(args) {
   return Number.isInteger(seed) && seed > 0 ? seed % 2147483647 : Date.now() % 2147483647;
 }
 
+function shareDirectiveLanes(seatCount, localSeat) {
+  const buffers = Array.from(
+    { length: seatCount },
+    () => new SharedArrayBuffer(DIRECTIVE_LANE_BYTES),
+  );
+  self.__forgeDirectiveLanes = buffers;
+  postEvent("game:directive_lanes", { buffers, localSeat });
+}
+
 async function startGame(requestId, args) {
   if (gameRunning) return postError(requestId, "Game already active.");
 
@@ -120,6 +130,7 @@ async function startGame(requestId, args) {
   seatBuffers.slice(1).forEach((buffer, index) => {
     postEvent("game:remote_sab", { buffer, playerSlot: `player-${index + 1}` });
   });
+  shareDirectiveLanes(seatBuffers.length, 0);
   postResponse(requestId, "game-started");
 
   const variant = forgeVariant(humanDeck);
@@ -209,6 +220,7 @@ async function startMultiplayerGame(requestId, args) {
     if (index === localPlayerIndex) return;
     postEvent("game:remote_sab", { buffer, playerSlot: `player-${index}` });
   });
+  shareDirectiveLanes(seatBuffers.length, localPlayerIndex);
   postResponse(requestId, "multiplayer-started");
 
   const variant = forgeVariant(decks[0]);
@@ -259,6 +271,7 @@ self.onmessage = (e) => {
   if (msg.command === "end_game") {
     gameRunning = false;
     self.__forgeSeatSabs = null;
+    self.__forgeDirectiveLanes = null;
     return postResponse(msg.requestId, null);
   }
   if (

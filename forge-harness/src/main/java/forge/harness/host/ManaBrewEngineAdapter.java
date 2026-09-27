@@ -106,7 +106,11 @@ public final class ManaBrewEngineAdapter {
         final ManaBrewInteractiveSession session =
                 new ManaBrewInteractiveSession(request.getGameId());
         final List<RegisteredPlayer> registeredPlayers = new ArrayList<>();
+        final Set<Integer> botSeats = new HashSet<>();
         for (PlayerConfig playerConfig : request.getPlayers()) {
+            if (playerConfig.isBot()) {
+                botSeats.add(registeredPlayers.size());
+            }
             Deck deck = buildDeck(playerConfig);
             RegisteredPlayer registeredPlayer = RegisteredPlayer.forVariants(
                     playerCount, variants, deck, null, false, null, null);
@@ -121,7 +125,7 @@ public final class ManaBrewEngineAdapter {
 
         final Match match = new Match(rules, registeredPlayers, "ManaBrew");
         final Game game = match.createGame();
-        session.attach(match, game);
+        session.attach(match, game, botSeats);
         sessions.put(session.getSessionId(), session);
         session.start(rng);
 
@@ -392,7 +396,10 @@ public final class ManaBrewEngineAdapter {
             boolean ai = playerObject.has("ai")
                     && !playerObject.get("ai").isJsonNull()
                     && playerObject.get("ai").getAsBoolean();
-            players.add(new PlayerConfig(name, deck, commanderNames, ai));
+            boolean bot = playerObject.has("bot")
+                    && !playerObject.get("bot").isJsonNull()
+                    && playerObject.get("bot").getAsBoolean();
+            players.add(new PlayerConfig(name, deck, commanderNames, ai, bot));
         }
         return new StartGameRequest(gameId, variant, startingLife, seed, players);
     }
@@ -465,12 +472,14 @@ public final class ManaBrewEngineAdapter {
         private final List<CardIdentity> deck;
         private final List<String> commanderNames;
         private final boolean ai;
+        private final boolean bot;
 
         public PlayerConfig(
                 final String name,
                 final List<CardIdentity> deck,
                 final List<String> commanderNames,
-                final boolean ai
+                final boolean ai,
+                final boolean bot
         ) {
             if (name == null || name.isBlank()) {
                 throw new IllegalArgumentException("player name is required");
@@ -482,6 +491,7 @@ public final class ManaBrewEngineAdapter {
             this.deck = List.copyOf(deck);
             this.commanderNames = commanderNames == null ? List.of() : List.copyOf(commanderNames);
             this.ai = ai;
+            this.bot = bot;
         }
 
         public String getName() {
@@ -498,6 +508,10 @@ public final class ManaBrewEngineAdapter {
 
         public boolean isAi() {
             return ai;
+        }
+
+        public boolean isBot() {
+            return bot;
         }
     }
 

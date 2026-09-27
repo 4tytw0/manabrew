@@ -1,7 +1,6 @@
 import { getPlatform } from "@/platform";
 import type {
   RespondParams,
-  RestoreSnapshotParams,
   SendDirectiveParams,
   StartGameParams,
   StartMultiplayerGameParams,
@@ -138,6 +137,8 @@ function createInitialGameView(params: StartGameParams): ClientGameView {
     monarchId: null,
     initiativeHolderId: null,
     dayTime: "neither",
+    checkpoints: [],
+    restoreVote: null,
   };
 }
 
@@ -250,10 +251,6 @@ export class ManualTabletopGameApi implements ManualTabletopApi {
     this.gameView = null;
     this.latestPrompt = null;
     this.libraries = {};
-  }
-
-  async restoreSnapshot(_params: RestoreSnapshotParams): Promise<void> {
-    throw new Error("Manual tabletop snapshots are not implemented yet.");
   }
 
   async getPrompt(): Promise<Prompt | null> {

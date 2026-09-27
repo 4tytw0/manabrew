@@ -5,7 +5,6 @@ import { createRoomRelayEnvelope, isRoomRelayProtocol } from "./roomRelay";
 import type {
   IGameApi,
   RespondParams,
-  RestoreSnapshotParams,
   SendDirectiveParams,
   StartGameParams,
   StartMultiplayerGameParams,
@@ -264,10 +263,6 @@ export class IronsmithTrustedGameApi implements IGameApi {
     this.sharedKeys.clear();
     this.concededPlayerSlots.clear();
     this.hostPlayerSlot = null;
-  }
-
-  async restoreSnapshot(_params: RestoreSnapshotParams): Promise<void> {
-    throw new Error("Ironsmith trusted runtime snapshots are not wired to Manabrew restore yet");
   }
 
   async getPrompt(): Promise<Prompt | null> {

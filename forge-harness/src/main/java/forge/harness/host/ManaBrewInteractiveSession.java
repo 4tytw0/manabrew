@@ -6,11 +6,14 @@ import forge.harness.common.ParityCardMap;
 import forge.harness.common.ParityOrder;
 import forge.harness.common.SnapshotExtractor;
 
+import com.google.common.eventbus.Subscribe;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import forge.harness.protocol.*;
 import forge.game.Game;
+import forge.game.GameSnapshot;
+import forge.game.event.GameEventPlayerPriority;
 import forge.game.ability.ApiType;
 import forge.game.GameEntity;
 import forge.game.Match;
@@ -21,6 +24,8 @@ import forge.game.card.CardView;
 import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
 import forge.game.cost.Cost;
+import forge.game.phase.PhaseHandler;
+import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.player.PlayerView;
 import forge.game.spellability.AbilityManaPart;
@@ -33,7 +38,9 @@ import forge.item.PaperCard;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedHashMap;
@@ -60,14 +67,57 @@ public final class ManaBrewInteractiveSession {
     private volatile String engineError;
     private final InteractiveSnapshotExtractor.SecretChoiceVisibility secretChoiceVisibility =
             new InteractiveSnapshotExtractor.SecretChoiceVisibility();
+    private static final int MAX_CHECKPOINTS = 32;
+    private final Deque<Checkpoint> checkpoints = new ArrayDeque<>();
+    private volatile List<Map<String, Object>> checkpointViews = List.of();
+    private int nextCheckpointId = 1;
+    private int checkpointTurn = -1;
+    private PhaseType checkpointPhase;
+    private Checkpoint requestedRestore;
+    private int restoreRequester = -1;
+    private int restoreVoteId;
+    private volatile Map<String, Object> restoreVoteView;
+    private boolean priorityPromptOpen;
+    private Set<Integer> botSeats = Set.of();
+
+    private static final class Checkpoint {
+        private final int id;
+        private final int turn;
+        private final PhaseType phase;
+        private final Player activePlayer;
+        private final Player priorityPlayer;
+        private final GameSnapshot snapshot;
+
+        private Checkpoint(
+                final int id,
+                final int turn,
+                final PhaseType phase,
+                final Player activePlayer,
+                final Player priorityPlayer,
+                final GameSnapshot snapshot) {
+            this.id = id;
+            this.turn = turn;
+            this.phase = phase;
+            this.activePlayer = activePlayer;
+            this.priorityPlayer = priorityPlayer;
+            this.snapshot = snapshot;
+        }
+    }
 
     ManaBrewInteractiveSession(final String sessionId) {
         this.sessionId = Objects.requireNonNull(sessionId, "sessionId");
     }
 
-    void attach(final Match match, final Game game) {
+    void attach(final Match match, final Game game, final Set<Integer> botSeats) {
         this.match = Objects.requireNonNull(match, "match");
         this.game = Objects.requireNonNull(game, "game");
+        this.botSeats = Set.copyOf(botSeats);
+        game.subscribeToEvents(new Object() {
+            @Subscribe
+            public void onPriority(final GameEventPlayerPriority event) {
+                recordCheckpoint();
+            }
+        });
     }
 
     public String getSessionId() {
@@ -161,7 +211,8 @@ public final class ManaBrewInteractiveSession {
     public String getSnapshotJson(final int viewer) {
         requireAttached();
         return InteractiveSnapshotExtractor.snapshotJson(
-                game, castingAbility, sessionId, viewer, secretChoiceVisibility);
+                game, castingAbility, sessionId, viewer, secretChoiceVisibility, checkpointViews,
+                restoreVoteView);
     }
 
     void rememberSecretNumberViewer(final String sourceCardId, final Player viewer) {
@@ -205,7 +256,7 @@ public final class ManaBrewInteractiveSession {
 
     static final String TRIGGER_ORDER_TITLE = "Order triggered abilities";
 
-    enum PriorityActionKind { ACTION, PASS, UNDO }
+    enum PriorityActionKind { ACTION, PASS, UNDO, RESTORE }
 
     static final class PriorityChoice {
         private final PriorityActionKind kind;
@@ -286,11 +337,17 @@ public final class ManaBrewInteractiveSession {
         publishPriorityPrompt(playerId, actionsForPrompt, untappableCards);
         while (!closed && !game.isGameOver()) {
             final JsonObject action;
+            priorityPromptOpen = true;
             try {
                 action = takeAction();
             } catch (InterruptedException error) {
                 Thread.currentThread().interrupt();
                 return new PriorityChoice(PriorityActionKind.PASS, null, null, null);
+            } finally {
+                priorityPromptOpen = false;
+            }
+            if (action.has("kind") && "request_restore".equals(action.get("kind").getAsString())) {
+                return new PriorityChoice(PriorityActionKind.RESTORE, null, null, null);
             }
             try {
                 return interpretPriorityAction(action, actionsForPrompt, untappableCards);
@@ -1881,6 +1938,13 @@ public final class ManaBrewInteractiveSession {
                 continue;
             }
             final String kind = action.has("kind") ? action.get("kind").getAsString() : "";
+            if ("request_restore".equals(kind)) {
+                requestRestore(action.get("player").getAsInt(), action.get("checkpointId").getAsInt());
+                if (priorityPromptOpen && requestedRestore != null) {
+                    return action;
+                }
+                continue;
+            }
             if (!"concede".equals(kind)) {
                 return action;
             }
@@ -1912,6 +1976,124 @@ public final class ManaBrewInteractiveSession {
         }
         player.concede();
         game.getAction().checkGameOverCondition();
+    }
+
+    boolean restoreIfApproved() {
+        final Checkpoint target = requestedRestore;
+        if (target == null) {
+            return false;
+        }
+        final int requester = restoreRequester;
+        requestedRestore = null;
+        restoreRequester = -1;
+        if (!checkpoints.contains(target)) {
+            publishRestoreVote(target, requester, Map.of("type", "unavailable"));
+            return false;
+        }
+        final Player decliner = restoreDecliner(target, requester);
+        if (decliner != null) {
+            publishRestoreVote(target, requester,
+                    Map.of("type", "declined", "playerId", "player-" + SnapshotExtractor.playerIndex(game, decliner)));
+            return false;
+        }
+        restore(target);
+        publishRestoreVote(target, requester, Map.of("type", "approved"));
+        return true;
+    }
+
+    private void publishRestoreVote(final Checkpoint target, final int requester, final Map<String, Object> status) {
+        final Map<String, Object> view = new LinkedHashMap<>();
+        view.put("voteId", restoreVoteId);
+        view.put("checkpointId", target.id);
+        view.put("requestedByPlayerId", "player-" + requester);
+        view.put("status", status);
+        restoreVoteView = view;
+    }
+
+    private void recordCheckpoint() {
+        final PhaseHandler handler = game.getPhaseHandler();
+        if (handler.getTurn() == checkpointTurn && handler.getPhase() == checkpointPhase) {
+            return;
+        }
+        checkpointTurn = handler.getTurn();
+        checkpointPhase = handler.getPhase();
+        if (!game.getStack().isEmpty() || game.getStack().hasSimultaneousStackEntries()) {
+            return;
+        }
+        final GameSnapshot snapshot = new GameSnapshot(game);
+        snapshot.makeCopy();
+        checkpoints.addLast(new Checkpoint(
+                nextCheckpointId++, handler.getTurn(), handler.getPhase(), handler.getPlayerTurn(),
+                handler.getPriorityPlayer(), snapshot));
+        while (checkpoints.size() > MAX_CHECKPOINTS) {
+            checkpoints.removeFirst();
+        }
+        publishCheckpointViews();
+    }
+
+    private void publishCheckpointViews() {
+        final List<Map<String, Object>> views = new ArrayList<>();
+        for (final Checkpoint checkpoint : checkpoints) {
+            views.add(InteractiveSnapshotExtractor.checkpointView(
+                    game, checkpoint.id, checkpoint.turn, checkpoint.phase, checkpoint.activePlayer));
+        }
+        checkpointViews = List.copyOf(views);
+    }
+
+    private void requestRestore(final int requester, final int checkpointId) {
+        if (requestedRestore != null) {
+            return;
+        }
+        final List<Player> players = game.getRegisteredPlayers();
+        if (requester < 0 || requester >= players.size() || players.get(requester).hasLost()) {
+            return;
+        }
+        for (final Checkpoint checkpoint : checkpoints) {
+            if (checkpoint.id == checkpointId) {
+                requestedRestore = checkpoint;
+                restoreRequester = requester;
+                restoreVoteId++;
+                publishRestoreVote(checkpoint, requester, Map.of("type", "pending"));
+                return;
+            }
+        }
+    }
+
+    private Player restoreDecliner(final Checkpoint target, final int requester) {
+        final String body = game.getRegisteredPlayers().get(requester).getName()
+                + " asks to restore the game to turn " + target.turn + ", "
+                + target.phase.nameForUi + ".";
+        for (final Player voter : game.getRegisteredPlayers()) {
+            final int index = SnapshotExtractor.playerIndex(game, voter);
+            if (index == requester || voter.hasLost() || botSeats.contains(index)
+                    || !(voter.getOriginalLobbyPlayer() instanceof ManaBrewInteractiveLobbyPlayer)) {
+                continue;
+            }
+            if (!awaitBooleanChoice("confirm_action", index, "Restore the game?", null, "confirm_restore",
+                    null, null, List.of("Yes", "No"), false, null, null, null, body)) {
+                return voter;
+            }
+        }
+        return null;
+    }
+
+    private void restore(final Checkpoint target) {
+        game.getStack().clear();
+        game.getStack().clearSimultaneousStack();
+        game.getStack().clearUndoStack();
+        target.snapshot.restoreGameState(game);
+        game.getPhaseHandler().setPriority(target.priorityPlayer);
+        checkpointTurn = target.turn;
+        checkpointPhase = target.phase;
+        while (checkpoints.peekLast() != target) {
+            checkpoints.removeLast();
+        }
+        publishCheckpointViews();
+        for (final Player player : game.getPlayers()) {
+            if (player.getController() instanceof ManaBrewInteractiveController) {
+                ((ManaBrewInteractiveController) player.getController()).clearHeldPass();
+            }
+        }
     }
 
     private boolean gameDecided() {
