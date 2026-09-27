@@ -36,12 +36,13 @@ export function DeckHubFilters({ total, loaded, ...filterProps }: DeckHubFilters
       className={cn(
         "shrink-0 transition-[width] lg:order-2 lg:border-l",
         expanded ? "lg:w-72" : "lg:w-14",
+        shortTouch && "lg:order-none lg:w-auto lg:border-l-0",
       )}
     >
       <div
         className={cn(
           "flex items-center justify-between border-b px-4 py-3 sm:px-6 lg:hidden",
-          shortTouch && "py-1.5",
+          shortTouch && "py-1.5 lg:flex",
         )}
       >
         <p className="text-xs text-muted-foreground" aria-live="polite">
@@ -52,7 +53,7 @@ export function DeckHubFilters({ total, loaded, ...filterProps }: DeckHubFilters
         <DeckHubFilterSheet {...filterProps} />
       </div>
       <aside
-        className="hidden h-full overflow-y-auto p-5 lg:block"
+        className={cn("hidden h-full overflow-y-auto p-5 lg:block", shortTouch && "lg:hidden")}
         aria-label={`Community filters`}
       >
         <div

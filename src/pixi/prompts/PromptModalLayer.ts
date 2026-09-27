@@ -1073,6 +1073,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     const cardRow = compactScrollOverflow ? new Container() : null;
     if (cardRow) {
       cardRow.eventMode = "static";
+      cardRow.once("destroyed", () => gsap.killTweensOf(cardRow));
       body.addChild(cardRow);
     }
     cards.forEach((card, index) => {

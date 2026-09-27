@@ -5,6 +5,9 @@
 ### Fixes
 
 * **ui:** keep printed and rules card inspection above stacked zone viewers
+* **ui:** keep the mobile account avatar circular at touch-target size
+* **ui:** reclaim card browsing space in Community deck previews on mobile portrait and landscape
+* **ui:** stop compact prompt card-row tweens when their Pixi modal is rebuilt
 * **ui:** expose all mobile combat stops and restore taps after cancelled hand peeks
 * **ui:** fit compact square cards to bottom-anchored fields and retain accessible overflow stacks
 * **ui:** fit two opponent rows and two or three local rows in compact square-card fields

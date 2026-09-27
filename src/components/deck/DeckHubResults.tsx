@@ -10,7 +10,9 @@ import type { DeckHubEntrySummary } from "@/api/hubTypes";
 import { FORMAT_DISPLAY, ROUTES } from "@/lib/constants";
 import { useHubStore } from "@/stores/useHubStore";
 import { useIsShortScreen, useIsTouch } from "@/hooks/useBreakpoints";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
+import { PORTRAIT_QUERY } from "@/lib/responsive";
 interface DeckHubResultsProps {
   entries: DeckHubEntrySummary[];
   loading: boolean;
@@ -62,6 +64,8 @@ export function DeckHubResults({
   const shortScreen = useIsShortScreen();
   const isTouch = useIsTouch();
   const shortTouch = shortScreen && isTouch;
+  const portrait = useMediaQuery(PORTRAIT_QUERY);
+  const shortLandscape = shortTouch && !portrait;
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [resetKey]);
@@ -109,7 +113,7 @@ export function DeckHubResults({
                 <div
                   className={cn(
                     "grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
-                    shortTouch && "grid-cols-3 gap-2 md:grid-cols-3",
+                    shortLandscape && "grid-cols-3 gap-2 md:grid-cols-3",
                   )}
                 >
                   {Array.from({ length: 10 }, (_, index) => (
@@ -177,7 +181,7 @@ export function DeckHubResults({
                       <div
                         className={cn(
                           "grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5",
-                          shortTouch && "grid-cols-3 gap-2 md:grid-cols-3",
+                          shortLandscape && "grid-cols-3 gap-2 md:grid-cols-3",
                         )}
                       >
                         {groupedEntries.map((entry) => (

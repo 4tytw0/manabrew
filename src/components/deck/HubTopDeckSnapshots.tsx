@@ -11,6 +11,8 @@ import { useSignInDialog } from "@/stores/useSignInDialogStore";
 import { isFeatureEnabled } from "@/featureFlags";
 import { cn } from "@/lib/utils";
 import { useIsShortScreen, useIsTouch } from "@/hooks/useBreakpoints";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { PORTRAIT_QUERY } from "@/lib/responsive";
 import type { TopDeckSnapshotEntry } from "@/api/hubTypes";
 const DEFAULT_BUCKET = "trending";
 const INITIAL_RANK_COUNT = 10;
@@ -34,6 +36,8 @@ export function HubTopDeckSnapshots({ onOpenDeck }: HubTopDeckSnapshotsProps) {
   const shortScreen = useIsShortScreen();
   const isTouch = useIsTouch();
   const shortTouch = shortScreen && isTouch;
+  const portrait = useMediaQuery(PORTRAIT_QUERY);
+  const shortLandscape = shortTouch && !portrait;
   const accountsEnabled = isFeatureEnabled("accounts");
   const viewerAccountId = useAuthStore((state) =>
     accountsEnabled && state.status === "signedIn" ? (state.account?.id ?? null) : null,
@@ -158,7 +162,7 @@ export function HubTopDeckSnapshots({ onOpenDeck }: HubTopDeckSnapshotsProps) {
           <div
             className={cn(
               "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3",
-              shortTouch && "grid-cols-3 gap-2 sm:grid-cols-3",
+              shortLandscape && "grid-cols-3 gap-2 sm:grid-cols-3",
             )}
           >
             {Array.from({ length: 6 }, (_, index) => (
@@ -178,8 +182,8 @@ export function HubTopDeckSnapshots({ onOpenDeck }: HubTopDeckSnapshotsProps) {
             {isTouch ? (
               <div
                 className={cn(
-                  "grid grid-cols-1 gap-3 sm:grid-cols-2",
-                  shortTouch && "grid-cols-3 gap-2 sm:grid-cols-3",
+                  "grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 sm:gap-3",
+                  shortLandscape && "grid-cols-3 gap-2 min-[380px]:grid-cols-3 sm:gap-2",
                 )}
               >
                 {displayedEntries.map((ranked) => (

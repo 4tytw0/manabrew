@@ -16,6 +16,7 @@ import {
   type GroupByMode,
   type ViewMode,
 } from "@/components/editor/deckBuilder.utils";
+import { useIsMobileGame } from "@/hooks/useBreakpoints";
 import { cn } from "@/lib/utils";
 import { MANA_LETTERS } from "@/themes/gameTheme";
 export type BrowserZoneFilter = "all" | "main" | "side" | "maybe";
@@ -208,6 +209,7 @@ export function DeckCardBrowserFilters({
   hasFilters,
   onClear,
 }: DeckCardBrowserFiltersProps) {
+  const shortTouch = useIsMobileGame();
   const activeFilterCount =
     Number(zone !== "all") +
     Number(cardType !== "all") +
@@ -274,7 +276,9 @@ export function DeckCardBrowserFilters({
   );
   return (
     <>
-      <div className="flex items-center justify-between gap-2 sm:hidden">
+      <div
+        className={cn("flex items-center justify-between gap-2 sm:hidden", shortTouch && "sm:flex")}
+      >
         <ViewControl value={viewMode} onChange={onViewModeChange} />
         <Sheet>
           <SheetTrigger asChild>
@@ -336,7 +340,12 @@ export function DeckCardBrowserFilters({
         </Sheet>
       </div>
 
-      <div className="-mx-1 hidden items-center gap-1 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex">
+      <div
+        className={cn(
+          "-mx-1 hidden items-center gap-1 overflow-x-auto px-1 pb-1 no-scrollbar sm:flex",
+          shortTouch && "sm:hidden",
+        )}
+      >
         {zoneControl}
         <div className="mx-1 h-5 w-px shrink-0 bg-border" />
         {groupControl}
