@@ -384,7 +384,9 @@ export class PromptLayer extends PromptModalLayer {
     const fixedWidth = minimal ? null : shortScreen ? 230 : 300;
     const fixedContentWidth = fixedWidth == null ? this.viewportWidth - 24 : fixedWidth - 16;
     const phaseAnchor = action.compactPhaseControl?.anchor ?? null;
-    const controls = minimal ? this.makeCompactActionControls(phaseAnchor === null) : null;
+    const controls = minimal
+      ? this.makeCompactActionControls(phaseAnchor === null, showPriorityMode, preview)
+      : null;
     const viewAvailableWidth = fixedContentWidth - (controls ? controls.width + 4 : 0);
     const view = this.buildActionView(viewKey, viewAvailableWidth, minimal, touch, preview);
     const rowWidth = view.width + (controls ? 4 + controls.width : 0);
@@ -1012,19 +1014,22 @@ export class PromptLayer extends PromptModalLayer {
     const counting = this.autopassRemainingMs != null;
     const passLabel = morphed ? endLabel : counting ? "PASSING" : "PASS";
     const combo = morphed ? endCombo : passCombo;
-    const height = 40;
+    const height = minimal ? 44 : 40;
 
     if (minimal) {
-      const end = this.makeButton(endLabel, action.onPassEndTurn, {
-        variant: "secondary",
+      const end = this.makeButton("", action.onPassEndTurn, {
         flat: true,
-        radius: 20,
+        radius: 16,
         disabled,
+        width: 48,
         height,
-        paddingX: 12,
-        fontSize: 10,
-        fontWeight: "700",
-        letterSpacing: 1,
+        icon: "lucide-skip-forward",
+        iconSize: 20,
+        labelPlacement: "hidden",
+        foreground: this.theme.appTheme.primary,
+        backgroundColor: this.theme.appTheme.primary,
+        backgroundAlpha: 0.2,
+        hoverBackgroundAlpha: 0.3,
         title: endCombo ? `${endTitle} (${comboSymbols(endCombo)})` : endTitle,
       });
       const pass = this.makeButton(
@@ -1035,6 +1040,7 @@ export class PromptLayer extends PromptModalLayer {
           flat: true,
           radius: 20,
           disabled,
+          width: 120,
           height,
           paddingX: 16,
           fontSize: 12,
@@ -1532,16 +1538,30 @@ export class PromptLayer extends PromptModalLayer {
     return container;
   }
 
-  private makeCompactActionControls(includePhase: boolean): ActionViewLayout {
+  private makeCompactActionControls(
+    includePhase: boolean,
+    showPriorityMode: boolean,
+    disabled: boolean,
+  ): ActionViewLayout {
     const phase = includePhase ? this.makeCompactPhaseButton() : null;
     const menu = this.makeActionMenuButton(true);
-    const controlViews = this.leftHanded
-      ? phase
-        ? [phase, menu]
-        : [menu]
-      : phase
-        ? [menu, phase]
-        : [menu];
+    const priorityMode = showPriorityMode ? this.makePriorityModePill(disabled, true) : null;
+    const utility = new Container();
+    if (priorityMode) {
+      utility.addChild(priorityMode);
+      menu.container.position.set(priorityMode.buttonWidth, 0);
+    }
+    utility.addChild(menu.container);
+    const utilities: ActionViewLayout = {
+      container: utility,
+      width: menu.width + (priorityMode?.buttonWidth ?? 0),
+      height: Math.max(menu.height, priorityMode?.buttonHeight ?? 0),
+    };
+    const controlViews = phase
+      ? this.leftHanded
+        ? [phase, utilities]
+        : [utilities, phase]
+      : [utilities];
     const height = controlViews.reduce(
       (controlHeight, control) => Math.max(controlHeight, control.height),
       0,
@@ -1637,7 +1657,7 @@ export class PromptLayer extends PromptModalLayer {
   }
 
   private makeActionMenuButton(minimal: boolean): ActionViewLayout {
-    const size = minimal ? 48 : 18;
+    const size = minimal ? 44 : 18;
     const button = new Container();
     const icon = this.makeIcon("lucide-settings", 14, this.theme.gameTheme.textOnTinted);
     icon.position.set(size / 2, size / 2);
@@ -1733,13 +1753,13 @@ export class PromptLayer extends PromptModalLayer {
     return (isAttackDecl || isBlockDecl || sample) && (activeAttackers.length > 0 || sample);
   }
 
-  private makePriorityModePill(disabled: boolean): PromptButton {
+  private makePriorityModePill(disabled: boolean, minimal = false): PromptButton {
     const state = usePromptPreferencesStore.getState();
     const combo = resolveCombo("toggle-priority-mode", useKeybindingsStore.getState().overrides);
     const fullControl = state.fullControl;
     const hint = combo ? ` (${formatCombo(combo)})` : "";
-    return this.makeButton(
-      fullControl ? "FULL CTRL" : "AUTOPASS",
+    const button = this.makeButton(
+      minimal ? (fullControl ? "FULL" : "AUTO") : fullControl ? "FULL CTRL" : "AUTOPASS",
       () => {
         const next = !usePromptPreferencesStore.getState().fullControl;
         usePromptPreferencesStore.getState().setFullControl(next);
@@ -1749,24 +1769,30 @@ export class PromptLayer extends PromptModalLayer {
           ? `Full control — you stop at every priority window${hint}`
           : `Autopass: dead priority windows pass automatically${hint}`,
         icon: fullControl ? "lucide-hand" : "lucide-zap",
-        iconSize: 12,
+        iconSize: minimal ? 16 : 12,
+        labelPlacement: minimal ? "stacked" : undefined,
         outline: true,
+        foreground: minimal ? this.theme.gameTheme.textOnTinted : undefined,
         backgroundColor: this.theme.gameTheme.textOnTinted,
-        backgroundAlpha: fullControl ? 0.15 : 0.05,
+        backgroundAlpha: minimal ? (fullControl ? 0.12 : 0) : fullControl ? 0.15 : 0.05,
         borderColor: fullControl ? this.theme.gameTheme.textOnTinted : this.theme.appTheme.border,
         hoverBackgroundAlpha: fullControl ? 0.2 : 0.1,
         hoverBorderAlpha: fullControl ? 0.3 : 1,
         pressOffsetY: 1,
-        borderAlpha: fullControl ? 0.3 : 0.6,
+        borderAlpha: minimal ? (fullControl ? 0.35 : 0) : fullControl ? 0.3 : 0.6,
         disabled,
-        width: fullControl ? 88 : 86,
-        height: 22,
+        width: minimal ? 44 : fullControl ? 88 : 86,
+        height: minimal ? 44 : 22,
         paddingX: 8,
-        fontSize: 9,
+        fontSize: minimal ? 8 : 9,
         fontWeight: "700",
-        letterSpacing: 1.08,
+        letterSpacing: minimal ? 0.4 : 1.08,
       },
     );
+    if (minimal) {
+      button.on("pointerdown", (event: FederatedPointerEvent) => event.stopPropagation());
+    }
+    return button;
   }
 
   private layoutWrappedActionButtons(

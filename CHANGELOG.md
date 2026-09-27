@@ -7,6 +7,9 @@
 * **ui:** keep printed and rules card inspection above stacked zone viewers
 * **ui:** expose all mobile combat stops and restore taps after cancelled hand peeks
 * **ui:** fit compact square cards to bottom-anchored fields and retain accessible overflow stacks
+* **ui:** fit two opponent rows and two or three local rows in compact square-card fields
+* **ui:** expand mobile choice prompts with readable rows and a scrollable option list
+* **ui:** fit mobile Pass, turn-skip, autopass, and settings into one short action row
 * **ui:** update live zone locks and keep narrow desktop source-card prompts usable
 * **ui:** use the deck editor menu style for landscape offline modes and app select controls
 * **ui:** match rules-preview view controls to printed previews

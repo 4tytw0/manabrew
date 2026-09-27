@@ -473,7 +473,10 @@ export abstract class PromptModalLayer extends PromptLayerBase {
     const requiredHeight = Math.ceil(
       state.bodyTop + contentHeight + state.footerHeight + MODAL_BODY_BOTTOM_PADDING,
     );
-    if (this.layerPresentation.modalBodyFit === "scale") {
+    const compactSelection =
+      this.layerPresentation.modalBodyFit === "scale" &&
+      this.spec?.currentPrompt?.input.type === "chooseFromSelection";
+    if (this.layerPresentation.modalBodyFit === "scale" && !compactSelection) {
       const compactHeight = Math.min(
         this.viewportHeight - PROMPT_MODAL_VIEWPORT_MARGIN,
         Math.max(state.height, requiredHeight),
@@ -518,10 +521,12 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       state.scrollThumb.visible = false;
       return;
     }
-    const fittedHeight = Math.min(
-      this.viewportHeight - PROMPT_MODAL_VIEWPORT_MARGIN,
-      Math.max(MODAL_MIN_HEIGHT, requiredHeight),
-    );
+    const fittedHeight = compactSelection
+      ? this.viewportHeight - PROMPT_MODAL_VIEWPORT_MARGIN
+      : Math.min(
+          this.viewportHeight - PROMPT_MODAL_VIEWPORT_MARGIN,
+          Math.max(MODAL_MIN_HEIGHT, requiredHeight),
+        );
     this.resizeModalShell(state, fittedHeight);
     const overflow = contentHeight - state.viewportHeight;
     this.modalScrollMax = overflow > 1 ? overflow : 0;
@@ -539,7 +544,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
         .clear()
         .roundRect(0, 0, 3, thumbHeight, 2)
         .fill({ color: hexToNum(this.theme.appTheme["muted-foreground"]), alpha: 0.85 });
-      state.scrollThumb.x = state.scrollTrack.x;
+      state.scrollThumb.x = compactSelection ? state.width - 8 : state.scrollTrack.x;
     }
     this.syncModalScrollPosition();
   }
@@ -621,20 +626,30 @@ export abstract class PromptModalLayer extends PromptLayerBase {
           option.label.toLocaleLowerCase().includes(normalizedFilter),
         )
       : indexedOptions;
+    const compactSelection = this.layerPresentation.modalBodyFit === "scale";
     const visibleRowCount = Math.max(1, Math.min(visibleOptions.length, 7));
     const width = this.modalPromptWidth(CHOICE_MODAL_WIDTH);
     const height = Math.min(
       Math.max(260, 132 + visibleRowCount * 66 + (showFilter ? 48 : 0) + 52),
       this.viewportHeight - 24,
     );
-    const { body, footer } = this.createModalShell(width, height, presentation, true, 60);
+    const { panel, body, footer } = this.createModalShell(width, height, presentation, true, 60);
     const availableWidth = Math.round(width - PANEL_PADDING * 2);
     const showWeights = options.some((option) => option.weight !== 1);
     let y = 4;
 
     if (showFilter) {
       const filter = new Container();
-      body.addChild(filter);
+      if (compactSelection) {
+        const state = this.modalBody!;
+        filter.position.set(PANEL_PADDING, state.bodyTop);
+        panel.addChild(filter);
+        state.bodyTop += 52;
+        this.resizeModalShell(state, state.height);
+        body.position.set(PANEL_PADDING, state.bodyTop);
+      } else {
+        body.addChild(filter);
+      }
       const filterBackground = new Graphics();
       filterBackground.eventMode = "static";
       filterBackground.cursor = "text";
@@ -653,7 +668,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       searchIcon.position.set(16, y + 20);
       const filterText = promptText(
         this.selectionFilter || "Search choices",
-        12,
+        compactSelection ? 15 : 12,
         this.selectionFilter
           ? this.theme.appTheme.foreground
           : this.theme.appTheme["muted-foreground"],
@@ -662,7 +677,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       filterText.position.set(30, y + 12);
       const resultCount = promptText(
         `${visibleOptions.length} result${visibleOptions.length === 1 ? "" : "s"}`,
-        10,
+        compactSelection ? 12 : 10,
         this.theme.appTheme["muted-foreground"],
         { weight: "600" },
       );
@@ -701,14 +716,16 @@ export abstract class PromptModalLayer extends PromptLayerBase {
         filter.addChild(clear);
       }
       this.setSelectionFilterFocused(this.selectionFilterFocused);
-      y += 52;
+      if (!compactSelection) y += 52;
     }
 
     if (visibleOptions.length === 0) {
-      const empty = promptText("No choices match your search", 12, this.theme.appTheme.muted, {
-        width: availableWidth,
-        align: "center",
-      });
+      const empty = promptText(
+        "No choices match your search",
+        compactSelection ? 14 : 12,
+        this.theme.appTheme.muted,
+        { width: availableWidth, align: "center" },
+      );
       empty.position.set(0, y + 22);
       body.addChild(empty);
       y += 66;
@@ -793,17 +810,20 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       const quantityWidth = option.canRepeat ? 102 : 0;
       const label = promptRichText(
         option.label,
-        13,
+        compactSelection ? 16 : 13,
         this.theme.appTheme.foreground,
         optionWidth - 58 - quantityWidth,
-        { weight: "600", maxLines: 1 },
+        { weight: "600", maxLines: compactSelection && !showWeights ? 2 : 1 },
       );
-      label.position.set(42, showWeights ? 10 : 19);
+      label.position.set(
+        42,
+        showWeights ? 10 : compactSelection ? (rowHeight - label.height) / 2 : 19,
+      );
       row.addChild(label);
       if (showWeights) {
         const weight = promptText(
           `${option.weight} point${option.weight === 1 ? "" : "s"}`,
-          10,
+          compactSelection ? 12 : 10,
           selected ? this.theme.gameTheme.cardSelection : this.theme.appTheme["muted-foreground"],
           { weight: "600" },
         );
@@ -876,18 +896,76 @@ export abstract class PromptModalLayer extends PromptLayerBase {
       optionPosition += 1;
     }
     y += Math.ceil(optionPosition / selectionColumns) * optionRowPitch;
+    if (compactSelection) {
+      let touchId: number | null = null;
+      let touchStartY = 0;
+      let scrollStart = 0;
+      let didScroll = false;
+      let scrolledTouchId: number | null = null;
+      panel.on("pointerdowncapture", (event: FederatedPointerEvent) => {
+        if (event.pointerType !== "touch" || touchId !== null) return;
+        scrolledTouchId = null;
+        if (this.modalScrollMax <= 0) return;
+        const state = this.modalBody!;
+        const localX = event.global.x - panel.x;
+        const localY = event.global.y - panel.y;
+        if (
+          localX < PANEL_PADDING ||
+          localX > width - PANEL_PADDING ||
+          localY < state.bodyTop ||
+          localY > state.bodyTop + state.viewportHeight
+        )
+          return;
+        touchId = event.pointerId;
+        didScroll = false;
+        touchStartY = event.global.y;
+        scrollStart = this.modalScrollOffset;
+      });
+      panel.on("pointermove", (event: FederatedPointerEvent) => {
+        if (touchId !== event.pointerId) return;
+        const delta = event.global.y - touchStartY;
+        if (!didScroll && Math.abs(delta) < 8) return;
+        didScroll = true;
+        scrolledTouchId = event.pointerId;
+        event.preventDefault();
+        this.modalScrollOffset = Math.max(0, Math.min(this.modalScrollMax, scrollStart - delta));
+        this.modalScrollTarget = this.modalScrollOffset;
+        this.syncModalScrollPosition();
+      });
+      panel.on("pointerup", (event: FederatedPointerEvent) => {
+        if (touchId === event.pointerId) touchId = null;
+      });
+      panel.on("pointerupoutside", (event: FederatedPointerEvent) => {
+        if (touchId === event.pointerId) touchId = null;
+        if (scrolledTouchId === event.pointerId) scrolledTouchId = null;
+      });
+      panel.on("pointercancel", (event: FederatedPointerEvent) => {
+        if (touchId === event.pointerId) touchId = null;
+        if (scrolledTouchId === event.pointerId) scrolledTouchId = null;
+      });
+      panel.on("pointertapcapture", (event: FederatedPointerEvent) => {
+        if (event.pointerType === "touch" && event.pointerId === scrolledTouchId) {
+          event.stopImmediatePropagation();
+          scrolledTouchId = null;
+        }
+      });
+    }
 
     const selectedTotal = this.selectionTotal(options);
     const canConfirm = selectedTotal >= minTotal && selectedTotal <= maxTotal;
-    const requirement =
-      minTotal === maxTotal
+    const requirement = compactSelection
+      ? minTotal === maxTotal
+        ? `${selectedTotal} of ${maxTotal} points`
+        : `${selectedTotal} points · need ${minTotal}–${maxTotal}`
+      : minTotal === maxTotal
         ? `${selectedTotal} of ${maxTotal} points selected`
         : `${selectedTotal} points selected · choose ${minTotal}–${maxTotal}`;
+    const confirmWidth = compactSelection ? 112 : 130;
     const status = promptText(
       requirement,
-      11,
+      compactSelection ? 13 : 11,
       canConfirm ? this.theme.gameTheme.success : this.theme.appTheme["muted-foreground"],
-      { weight: "600", width: availableWidth - 150, truncate: true },
+      { weight: "600", width: availableWidth - confirmWidth - 20, truncate: true },
     );
     status.position.set(2, 10);
     footer.addChild(status);
@@ -901,7 +979,7 @@ export abstract class PromptModalLayer extends PromptLayerBase {
           );
         this.spec!.respond({ type: "selectionDecision", chosenIndices });
       },
-      { disabled: !canConfirm, width: 130 },
+      { disabled: !canConfirm, width: confirmWidth },
     );
     confirm.position.set(availableWidth - confirm.buttonWidth, 0);
     footer.addChild(confirm);

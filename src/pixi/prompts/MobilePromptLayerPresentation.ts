@@ -8,8 +8,8 @@ export class MobilePromptLayerPresentation implements PromptLayerPresentation {
   readonly actionStyle = "minimal";
   readonly modalBodyFit = "scale";
   readonly cardLayout = "horizontal-scroll";
-  readonly selectionRowHeight = 50;
-  readonly selectionRowPitch = 58;
+  readonly selectionRowHeight = 64;
+  readonly selectionRowPitch = 70;
   readonly scryHint: ScryPromptHint = {
     centerOffsetY: 4,
     deckSize: 32,
@@ -37,8 +37,8 @@ export class MobilePromptLayerPresentation implements PromptLayerPresentation {
     return hasSource ? Math.max(0, viewportWidth - sourceWidth - sourceGap) : viewportWidth;
   }
 
-  selectionColumns(allSingleChoice: boolean): number {
-    return allSingleChoice ? 2 : 1;
+  selectionColumns(_allSingleChoice: boolean): number {
+    return 1;
   }
 
   cardMaxHeight(viewportHeight: number): number {
