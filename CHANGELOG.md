@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.51.2](https://github.com/witchesofthehill/manabrew/compare/v3.51.1...v3.51.2) (2026-09-29)
+
+### Other
+
+* Update index.mdx ([d8b0e10](https://github.com/witchesofthehill/manabrew/commit/d8b0e1047f19d9063af44664cf61fbf5c3f01978))
+* Update index.mdx ([c5aefbe](https://github.com/witchesofthehill/manabrew/commit/c5aefbef0d48c8f9ca34ec44bf7ae46c9e374914))
+
 ## [3.51.1](https://github.com/witchesofthehill/manabrew/compare/v3.51.0...v3.51.1) (2026-09-29)
 
 ### Other
