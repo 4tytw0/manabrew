@@ -27,12 +27,28 @@ Enforcing the rules is up to the particular engine implementing the protocol.
 
 ## Message families
 
+
+Message families
+
+The engine → client channel carries four separate kinds of message:
+
+* 
+* [⚠️ Work in Progress] A DisplayEvent — transient, potentially very frequent UI display information. It carries no authoritative state. This could be used for things such as multiplayer cursors and other “liveliness” that should not be part of the game state.
+* An AgentPrompt — a call to action. The engine has paused and needs a decision from a specific player.
+* A ProtocolError — the engine rejected the last response. See Errors⁠￼.
+
+The client → engine channel carries two:
+
+* A PromptOutput answering the open prompt, echoing its promptId. Strictly paired: one response per prompt. See Answering a prompt⁠￼.
+* A DirectiveInput — out-of-band and fire-and-forget, never paired with a prompt. Currently only concede, legal at any time.
+
+Prompts deliberately carry no gameView: the client maintains the latest authoritative view by applying StateUpdates in order.
 The engine → client channel carries **four separate kinds of message**:
 
 <CardGrid>
   <Card title="state" icon="seti:db">
-    A `StateUpdate` carrying the full [`gameView`](/protocol/game-view/) - the **only** carrier of
-    game state. The client re-renders the board from it.
+    A `StateUpdate` carrying authoritative game state. This may contain a full [`gameView`](/protocol/game-view/)⁠, or a [`patch`](/protocol/game-view/#state-patches) against the client’s current view. 
+    StateUpdate is the **only** carrier of authoritative game state; the client applies updates in order and renders from the resulting view.
   </Card>
   <Card title="display" icon="sparkles">
     [**⚠️ Work in Progress**] A `DisplayEvent` - a transient, potentially very frequent UI display
