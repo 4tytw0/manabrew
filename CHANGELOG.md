@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.53.1](https://github.com/witchesofthehill/manabrew/compare/v3.53.0...v3.53.1) (2026-09-30)
+
+### Fixes
+
+* optimise snapshot on pass-until ([#1023](https://github.com/witchesofthehill/manabrew/issues/1023)) ([82b7e1f](https://github.com/witchesofthehill/manabrew/commit/82b7e1f5b5d1753ef7944af4f166381d700cbfd3))
+
 ## [3.53.0](https://github.com/witchesofthehill/manabrew/compare/v3.52.0...v3.53.0) (2026-09-30)
 
 ### Features
