@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.53.0](https://github.com/witchesofthehill/manabrew/compare/v3.52.0...v3.53.0) (2026-09-30)
+
+### Features
+
+* **observability:** measure hosted and wasm checkpoint costs ([#1022](https://github.com/witchesofthehill/manabrew/issues/1022)) ([33f3346](https://github.com/witchesofthehill/manabrew/commit/33f33465694b62389412944de15f82840c6a31c1))
+
 ## [3.52.0](https://github.com/witchesofthehill/manabrew/compare/v3.51.2...v3.52.0) (2026-09-29)
 
 ### Features
