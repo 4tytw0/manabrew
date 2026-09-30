@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.53.2](https://github.com/witchesofthehill/manabrew/compare/v3.53.1...v3.53.2) (2026-09-30)
+
+### Fixes
+
+* preload cards ([#1024](https://github.com/witchesofthehill/manabrew/issues/1024)) ([f6e9aed](https://github.com/witchesofthehill/manabrew/commit/f6e9aed955e917c35d83b0367c1bd82ecb3a0053))
+
 ## [3.53.1](https://github.com/witchesofthehill/manabrew/compare/v3.53.0...v3.53.1) (2026-09-30)
 
 ### Fixes
