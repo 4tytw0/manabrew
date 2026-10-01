@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.54.0](https://github.com/witchesofthehill/manabrew/compare/v3.53.2...v3.54.0) (2026-10-01)
+
+### Features
+
+* **ui:** redesign mobile interface ([#931](https://github.com/witchesofthehill/manabrew/issues/931)) ([074774d](https://github.com/witchesofthehill/manabrew/commit/074774d1d460f25ee82bc4e486cbecc7ee386f81))
+
 ## Unreleased
 
 ### Fixes
