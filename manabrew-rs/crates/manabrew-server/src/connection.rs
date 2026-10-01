@@ -669,6 +669,7 @@ pub async fn handle_connection(
             platform: client.platform.as_str().to_string(),
             version: client.version().map(str::to_string),
             reconnected,
+            engine_gate: client.engine_gate.as_str().to_string(),
         });
     }
 
@@ -870,8 +871,9 @@ async fn authenticate(
             identity,
             client_platform,
             client_version,
+            engine_gate,
         } => {
-            let client = ClientBuild::new(client_platform, client_version);
+            let client = ClientBuild::new(client_platform, client_version, engine_gate);
             if password != state.server_key {
                 let reply = ServerMessage::AuthResult {
                     success: false,
@@ -1681,6 +1683,7 @@ fn handle_client_message(
                 engine_rules_p50: stats.engine_think_rules.as_ref().map(|t| t.p50),
                 engine_rules_p90: stats.engine_think_rules.as_ref().map(|t| t.p90),
                 engine_rules_max: stats.engine_think_rules.as_ref().map(|t| t.max),
+                checkpoints: stats.checkpoints,
             });
         }
 

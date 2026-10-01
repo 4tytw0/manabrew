@@ -106,7 +106,11 @@ public final class ManaBrewEngineAdapter {
         final ManaBrewInteractiveSession session =
                 new ManaBrewInteractiveSession(request.getGameId());
         final List<RegisteredPlayer> registeredPlayers = new ArrayList<>();
+        final Set<Integer> botSeats = new HashSet<>();
         for (PlayerConfig playerConfig : request.getPlayers()) {
+            if (playerConfig.isBot()) {
+                botSeats.add(registeredPlayers.size());
+            }
             Deck deck = buildDeck(playerConfig);
             RegisteredPlayer registeredPlayer = RegisteredPlayer.forVariants(
                     playerCount, variants, deck, null, false, null, null);
@@ -121,7 +125,10 @@ public final class ManaBrewEngineAdapter {
 
         final Match match = new Match(rules, registeredPlayers, "ManaBrew");
         final Game game = match.createGame();
-        session.attach(match, game);
+        session.attach(match, game, botSeats, request.isSnapshotRecording());
+        if (request.checkpointMetrics) {
+            session.enableCheckpointMetrics();
+        }
         sessions.put(session.getSessionId(), session);
         session.start(rng);
 
@@ -154,7 +161,20 @@ public final class ManaBrewEngineAdapter {
     }
 
     public String getGameOver(final String sessionId) {
-        return String.valueOf(getSession(sessionId).isGameOver());
+        final ManaBrewInteractiveSession session = getSession(sessionId);
+        final String error = session.getEngineError();
+        if (error != null) {
+            throw new IllegalStateException(error);
+        }
+        return String.valueOf(session.isGameOver());
+    }
+
+    public String drainCheckpointMetrics(final String sessionId) {
+        return getSession(sessionId).drainCheckpointMetrics();
+    }
+
+    public String getStateRevision(final String sessionId) {
+        return String.valueOf(getSession(sessionId).getStateRevision());
     }
 
     public String getEngineError(final String sessionId) {
@@ -354,6 +374,7 @@ public final class ManaBrewEngineAdapter {
         String variant = optionalString(root, "variant");
         int startingLife = root.has("startingLife") ? root.get("startingLife").getAsInt() : 20;
         long seed = root.has("seed") ? root.get("seed").getAsLong() : 42L;
+        boolean snapshotRecording = !root.has("snapshotRecording") || root.get("snapshotRecording").getAsBoolean();
         JsonArray playerValues = root.getAsJsonArray("players");
         if (playerValues == null) {
             throw new IllegalArgumentException("players is required");
@@ -392,9 +413,15 @@ public final class ManaBrewEngineAdapter {
             boolean ai = playerObject.has("ai")
                     && !playerObject.get("ai").isJsonNull()
                     && playerObject.get("ai").getAsBoolean();
-            players.add(new PlayerConfig(name, deck, commanderNames, ai));
+            boolean bot = playerObject.has("bot")
+                    && !playerObject.get("bot").isJsonNull()
+                    && playerObject.get("bot").getAsBoolean();
+            players.add(new PlayerConfig(name, deck, commanderNames, ai, bot));
         }
-        return new StartGameRequest(gameId, variant, startingLife, seed, players);
+        final StartGameRequest request = new StartGameRequest(
+                gameId, variant, startingLife, seed, snapshotRecording, players);
+        request.checkpointMetrics = root.has("checkpointMetrics") && root.get("checkpointMetrics").getAsBoolean();
+        return request;
     }
 
     private static String requiredString(final JsonObject object, final String key) {
@@ -417,6 +444,8 @@ public final class ManaBrewEngineAdapter {
         private final String variant;
         private final int startingLife;
         private final long seed;
+        private final boolean snapshotRecording;
+        private boolean checkpointMetrics;
         private final List<PlayerConfig> players;
 
         public StartGameRequest(
@@ -424,6 +453,7 @@ public final class ManaBrewEngineAdapter {
                 final String variant,
                 final int startingLife,
                 final long seed,
+                final boolean snapshotRecording,
                 final List<PlayerConfig> players
         ) {
             if (gameId == null || gameId.isBlank()) {
@@ -436,7 +466,12 @@ public final class ManaBrewEngineAdapter {
             this.variant = variant;
             this.startingLife = startingLife;
             this.seed = seed;
+            this.snapshotRecording = snapshotRecording;
             this.players = List.copyOf(players);
+        }
+
+        public boolean isSnapshotRecording() {
+            return snapshotRecording;
         }
 
         public String getGameId() {
@@ -465,12 +500,14 @@ public final class ManaBrewEngineAdapter {
         private final List<CardIdentity> deck;
         private final List<String> commanderNames;
         private final boolean ai;
+        private final boolean bot;
 
         public PlayerConfig(
                 final String name,
                 final List<CardIdentity> deck,
                 final List<String> commanderNames,
-                final boolean ai
+                final boolean ai,
+                final boolean bot
         ) {
             if (name == null || name.isBlank()) {
                 throw new IllegalArgumentException("player name is required");
@@ -482,6 +519,7 @@ public final class ManaBrewEngineAdapter {
             this.deck = List.copyOf(deck);
             this.commanderNames = commanderNames == null ? List.of() : List.copyOf(commanderNames);
             this.ai = ai;
+            this.bot = bot;
         }
 
         public String getName() {
@@ -498,6 +536,10 @@ public final class ManaBrewEngineAdapter {
 
         public boolean isAi() {
             return ai;
+        }
+
+        public boolean isBot() {
+            return bot;
         }
     }
 
