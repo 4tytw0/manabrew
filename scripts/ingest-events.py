@@ -224,6 +224,7 @@ def open_db(path: Path) -> sqlite3.Connection:
         "engine_rules_max",
     ):
         ensure_column(db, "engine_stats", column, "INTEGER")
+    ensure_column(db, "engine_stats", "checkpoints", "TEXT")
     ensure_column(db, "games", "source", "TEXT")
     ensure_column(db, "games", "reported_at", "TEXT")
     # Whether the engine host filed the outcome. Relay rows from before the
@@ -234,6 +235,10 @@ def open_db(path: Path) -> sqlite3.Connection:
     # when none did. Compare with player_count for the room's shape.
     ensure_column(db, "games", "direct_seats", "INTEGER")
     db.execute("UPDATE games SET source = 'relay' WHERE source IS NULL")
+    db.execute(
+        "UPDATE games SET game_over = 0 "
+        "WHERE end_reason IN ('engine_error', 'engine_fatal') AND game_over != 0"
+    )
     ensure_column(db, "events", "event_id", "TEXT")
     db.execute("CREATE INDEX IF NOT EXISTS idx_events_event_id ON events(event_id)")
     backfill_event_ids(db)
@@ -326,7 +331,10 @@ def ingest_game_ended(db, ev):
             ev.get("ts"),
             ev.get("duration_s"),
             ev.get("reason"),
-            int(bool(ev.get("game_over"))),
+            int(
+                bool(ev.get("game_over"))
+                and ev.get("reason") not in ("engine_error", "engine_fatal")
+            ),
             ev.get("winner"),
             None if reported is None else int(bool(reported)),
             ev.get("turns"),
@@ -399,14 +407,14 @@ ENGINE_STATS_COLUMNS = (
     "reply_wait_p50, reply_wait_p90, reply_wait_max, "
     "client_work_p50, client_work_p90, client_work_max, "
     "engine_bot_p50, engine_bot_p90, engine_bot_max, "
-    "engine_rules_p50, engine_rules_p90, engine_rules_max"
+    "engine_rules_p50, engine_rules_p90, engine_rules_max, checkpoints"
 )
 
 
 def ingest_engine_stats(db, ev):
     db.execute(
         f"""INSERT OR IGNORE INTO engine_stats ({ENGINE_STATS_COLUMNS})
-           VALUES ({", ".join("?" * 38)})""",
+           VALUES ({", ".join("?" * 39)})""",
         (
             # A relay from before the report id was forwarded still identifies a
             # report well enough to keep re-ingestion idempotent. The room is
@@ -450,6 +458,7 @@ def ingest_engine_stats(db, ev):
             ev.get("engine_rules_p50"),
             ev.get("engine_rules_p90"),
             ev.get("engine_rules_max"),
+            json.dumps(ev["checkpoints"]) if ev.get("checkpoints") is not None else None,
         ),
     )
 
@@ -610,7 +619,7 @@ def sync_offline_games(db, hub) -> int:
                     starting_life,
                     seat_count,
                     end_reason,
-                    game_over,
+                    int(bool(game_over) and end_reason not in ("engine_error", "engine_fatal")),
                     winner,
                     reported_at,
                 ),
@@ -786,9 +795,12 @@ def refresh_hub_analytics(db, hub_path: Path) -> bool:
         mirrored_through = db.execute(
             "SELECT coalesce(max(ts), '') FROM engine_stats WHERE source = 'hub'"
         ).fetchone()[0]
+        checkpoint_column = "checkpoints" if any(
+            row[1] == "checkpoints" for row in hub.execute("PRAGMA table_info(engine_play_stats)")
+        ) else "NULL"
         engine_reports = hub_rows(
             hub,
-            """SELECT id, reported_at, game_id, engine, client_version, platform, format,
+            f"""SELECT id, reported_at, game_id, engine, client_version, platform, format,
                       seats, multiplayer, duration_s, end_reason, decisions,
                       turnaround_p50, turnaround_p90, turnaround_max,
                       engine_p50, engine_p90, engine_max,
@@ -798,7 +810,7 @@ def refresh_hub_analytics(db, hub_path: Path) -> bool:
                       reply_wait_p50, reply_wait_p90, reply_wait_max,
                       client_work_p50, client_work_p90, client_work_max,
                       engine_bot_p50, engine_bot_p90, engine_bot_max,
-                      engine_rules_p50, engine_rules_p90, engine_rules_max
+                      engine_rules_p50, engine_rules_p90, engine_rules_max, {checkpoint_column}
                FROM engine_play_stats
                WHERE reported_at > ?""",
             (mirrored_through,),
@@ -843,7 +855,7 @@ def refresh_hub_analytics(db, hub_path: Path) -> bool:
         )
         db.executemany(
             f"""INSERT OR IGNORE INTO engine_stats ({ENGINE_STATS_COLUMNS})
-                VALUES (?, ?, 'hub', {", ".join("?" * 35)})""",
+                VALUES (?, ?, 'hub', {", ".join("?" * 36)})""",
             engine_reports,
         )
         db.execute("DELETE FROM hub_collection_cards")

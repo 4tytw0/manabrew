@@ -1,5 +1,89 @@
 # Changelog
 
+## [3.54.0](https://github.com/witchesofthehill/manabrew/compare/v3.53.2...v3.54.0) (2026-10-01)
+
+### Features
+
+* **ui:** redesign mobile interface ([#931](https://github.com/witchesofthehill/manabrew/issues/931)) ([074774d](https://github.com/witchesofthehill/manabrew/commit/074774d1d460f25ee82bc4e486cbecc7ee386f81))
+
+## Unreleased
+
+### Fixes
+* **ui:** move the mobile stack below opponent fields and let touches outside its cards switch fields
+* **ui:** cover full battlefield cards with mana-tap actions on mobile and desktop
+* **ui:** filter card-choice prompts by name on mobile and desktop without losing selected cards
+* **ui:** grow compact stack cards while keeping short-screen controls clear
+* **ui:** return to the battlefield after casting from the command zone
+* **ui:** dismiss touch card previews with one outside tap without activating the card beneath
+
+* **ui:** keep printed and rules card inspection above stacked zone viewers
+* **ui:** keep the mobile account avatar circular at touch-target size
+* **ui:** reclaim card browsing space in Community deck previews on mobile portrait and landscape
+* **ui:** stop compact prompt card-row tweens when their Pixi modal is rebuilt
+* **ui:** expose all mobile combat stops and restore taps after cancelled hand peeks
+* **ui:** fit compact square cards to bottom-anchored fields and retain accessible overflow stacks
+* **ui:** fit two opponent rows and two or three local rows in compact square-card fields
+* **ui:** fill compact tap and untap overlays while preserving card dragging
+* **ui:** expand mobile choice prompts with readable rows and a scrollable option list
+* **ui:** fit mobile Pass, turn-skip, autopass, and settings into one short action row
+* **ui:** update live zone locks and keep narrow desktop source-card prompts usable
+* **ui:** use the deck editor menu style for landscape offline modes and app select controls
+* **ui:** match rules-preview view controls to printed previews
+* **ui:** remove synthesized game sounds, sound settings, and unused volume preferences
+
+## [3.53.2](https://github.com/witchesofthehill/manabrew/compare/v3.53.1...v3.53.2) (2026-09-30)
+
+### Fixes
+
+* preload cards ([#1024](https://github.com/witchesofthehill/manabrew/issues/1024)) ([f6e9aed](https://github.com/witchesofthehill/manabrew/commit/f6e9aed955e917c35d83b0367c1bd82ecb3a0053))
+
+## [3.53.1](https://github.com/witchesofthehill/manabrew/compare/v3.53.0...v3.53.1) (2026-09-30)
+
+### Fixes
+
+* optimise snapshot on pass-until ([#1023](https://github.com/witchesofthehill/manabrew/issues/1023)) ([82b7e1f](https://github.com/witchesofthehill/manabrew/commit/82b7e1f5b5d1753ef7944af4f166381d700cbfd3))
+
+## [3.53.0](https://github.com/witchesofthehill/manabrew/compare/v3.52.0...v3.53.0) (2026-09-30)
+
+### Features
+
+* **observability:** measure hosted and wasm checkpoint costs ([#1022](https://github.com/witchesofthehill/manabrew/issues/1022)) ([33f3346](https://github.com/witchesofthehill/manabrew/commit/33f33465694b62389412944de15f82840c6a31c1))
+
+## [3.52.0](https://github.com/witchesofthehill/manabrew/compare/v3.51.2...v3.52.0) (2026-09-29)
+
+### Features
+
+* snapshot restore via directive ([#1006](https://github.com/witchesofthehill/manabrew/issues/1006)) ([d071b2f](https://github.com/witchesofthehill/manabrew/commit/d071b2ffa05dab0efa079d0184b7d3e17e1852a2))
+
+## [3.51.2](https://github.com/witchesofthehill/manabrew/compare/v3.51.1...v3.51.2) (2026-09-29)
+
+### Other
+
+* Update index.mdx ([d8b0e10](https://github.com/witchesofthehill/manabrew/commit/d8b0e1047f19d9063af44664cf61fbf5c3f01978))
+* Update index.mdx ([c5aefbe](https://github.com/witchesofthehill/manabrew/commit/c5aefbef0d48c8f9ca34ec44bf7ae46c9e374914))
+
+## [3.51.1](https://github.com/witchesofthehill/manabrew/compare/v3.51.0...v3.51.1) (2026-09-29)
+
+### Other
+
+* Update index.mdx ([abbd837](https://github.com/witchesofthehill/manabrew/commit/abbd837a8314feecd1f3e17c2764f64ec5edebc0))
+
+## [3.51.0](https://github.com/witchesofthehill/manabrew/compare/v3.50.2...v3.51.0) (2026-09-28)
+
+### Features
+
+* **forge-wasm:** report the engine gate and retry timed-out trials ([#989](https://github.com/witchesofthehill/manabrew/issues/989)) ([8f1d454](https://github.com/witchesofthehill/manabrew/commit/8f1d4547f5bc7c10d862f0fe6083fbec66c23c03))
+
+### Fixes
+
+* protect hub deploys and correct engine health reporting ([#988](https://github.com/witchesofthehill/manabrew/issues/988)) ([d48d4eb](https://github.com/witchesofthehill/manabrew/commit/d48d4eba55635b5e4b3c65eb3bd03ae7b9ae7c25))
+
+## [3.50.2](https://github.com/witchesofthehill/manabrew/compare/v3.50.1...v3.50.2) (2026-09-27)
+
+### Fixes
+
+* repair post-battlefield gameplay regressions ([#994](https://github.com/witchesofthehill/manabrew/issues/994)) ([68c3b87](https://github.com/witchesofthehill/manabrew/commit/68c3b8741a8b61fcc5bc91a387c5c4026c97dfed))
+
 ## [3.50.1](https://github.com/witchesofthehill/manabrew/compare/v3.50.0...v3.50.1) (2026-09-26)
 
 ### Fixes
