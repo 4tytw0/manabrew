@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.54.2](https://github.com/witchesofthehill/manabrew/compare/v3.54.1...v3.54.2) (2026-10-03)
+
+### Fixes
+
+* reduce memory pressure due to snapshots ([#1031](https://github.com/witchesofthehill/manabrew/issues/1031)) ([c64b41c](https://github.com/witchesofthehill/manabrew/commit/c64b41c49a9003c2752dbf28bcc71ee1d4d98e00))
+
 ## [3.54.1](https://github.com/witchesofthehill/manabrew/compare/v3.54.0...v3.54.1) (2026-10-01)
 
 ### Fixes
