@@ -4398,7 +4398,7 @@ dependencies = [
 
 [[package]]
 name = "manabrew"
-version = "3.54.2"
+version = "3.54.3"
 dependencies = [
  "flate2",
  "forge-carddb",
@@ -4497,7 +4497,7 @@ dependencies = [
 
 [[package]]
 name = "manabrew-hub"
-version = "0.21.0"
+version = "0.21.1"
 dependencies = [
  "aws-lc-rs",
  "aws-sdk-s3",

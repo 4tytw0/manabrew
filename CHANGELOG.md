@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.54.3](https://github.com/witchesofthehill/manabrew/compare/v3.54.2...v3.54.3) (2026-10-04)
+
+### Fixes
+
+* terrible fetching logic on deckeditor ([#1032](https://github.com/witchesofthehill/manabrew/issues/1032)) ([6b8058a](https://github.com/witchesofthehill/manabrew/commit/6b8058a6ced261e1758c5336c549a48e7a974c86))
+
 ## [3.54.2](https://github.com/witchesofthehill/manabrew/compare/v3.54.1...v3.54.2) (2026-10-03)
 
 ### Fixes
