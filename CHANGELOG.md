@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.54.3](https://github.com/witchesofthehill/manabrew/compare/v3.54.2...v3.54.3) (2026-10-04)
+
+### Fixes
+
+* terrible fetching logic on deckeditor ([#1032](https://github.com/witchesofthehill/manabrew/issues/1032)) ([6b8058a](https://github.com/witchesofthehill/manabrew/commit/6b8058a6ced261e1758c5336c549a48e7a974c86))
+
+## [3.54.2](https://github.com/witchesofthehill/manabrew/compare/v3.54.1...v3.54.2) (2026-10-03)
+
+### Fixes
+
+* reduce memory pressure due to snapshots ([#1031](https://github.com/witchesofthehill/manabrew/issues/1031)) ([c64b41c](https://github.com/witchesofthehill/manabrew/commit/c64b41c49a9003c2752dbf28bcc71ee1d4d98e00))
+
+## [3.54.1](https://github.com/witchesofthehill/manabrew/compare/v3.54.0...v3.54.1) (2026-10-01)
+
+### Fixes
+
+* **ui:** simplify sealed deck building and clarify draft setup ([#1015](https://github.com/witchesofthehill/manabrew/issues/1015)) ([5b90e1c](https://github.com/witchesofthehill/manabrew/commit/5b90e1cec1bb46bf297151ec578d20520fbf9cc3))
+
 ## [3.54.0](https://github.com/witchesofthehill/manabrew/compare/v3.53.2...v3.54.0) (2026-10-01)
 
 ### Features
